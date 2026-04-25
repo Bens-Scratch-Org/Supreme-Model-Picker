@@ -32,6 +32,8 @@
   - [Cost-per-Performance Analysis](#cost-per-performance-analysis)
   - [Effective Monthly Budget Scenarios](#effective-monthly-budget-scenarios)
   - [Cost Optimization Strategies](#cost-optimization-strategies)
+  - [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario)
+  - [Recommendations Under a Token-Based Copilot](#recommendations-under-a-token-based-copilot)
 - [Best-Suited Use Cases](#best-suited-use-cases)
 - [Key Takeaways](#key-takeaways)
 - [Methodology Notes](#methodology-notes)
@@ -585,6 +587,88 @@ For a developer making **200 coding interactions/month** with their primary mode
 | **Power user value** | ❌ Penalizes heavy Opus/GPT-5.5 users | ✅ Pay proportional to usage |
 
 **Bottom line:** The PRU model strongly favors casual-to-moderate users who stay within included models and occasionally use standard premium. Token-based pricing would dramatically benefit heavy users of ultra-premium models but would remove the zero-cost included tier that makes Copilot's baseline so attractive. The current PRU system is likely a deliberate strategic choice: subsidize the premium tier from ultra-premium overcharges while keeping the base experience free to maximize adoption.
+
+### Recommendations Under a Token-Based Copilot
+
+> **Premise:** This section answers a single question — *"If GitHub switched Copilot from PRU billing to direct token-based billing tomorrow, how should I change which models I reach for?"* All recommendations below combine the SWE-bench bash-only performance data, the leaderboard's per-instance dollar costs, and the provider list prices in the [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario) table.
+>
+> Token math throughout uses a typical Copilot chat turn of **4K input + 2K output tokens** (~$0.012 of "weight" at unit prices). Heavy agentic loops can be 10–100× larger; recommendations call this out where it matters.
+
+#### What changes about model selection
+
+Three structural shifts happen on day one of token pricing:
+
+1. **Included models stop being free.** GPT-5 mini, GPT-4.1, and GPT-4o would all start metering at provider rates ($0.005, $0.024, and $0.030 per typical chat respectively). The "default to GPT-5 mini for routine tasks" rule of thumb still wins — it's just no longer free.
+2. **Ultra-premium gets dramatically cheaper.** Claude Opus 4.7 and GPT-5.5 drop from **$0.30/chat (PRU)** to **~$0.07–0.08/chat (tokens)** — a 4× reduction. Reaching for the top-of-the-line model becomes a routine choice, not a rationed one.
+3. **Cost discrimination happens at the prompt level, not the model level.** Long context windows, large diffs, or chatty agentic workflows now drive your bill more than model choice does. A 50K-token agent run on Haiku 4.5 ($0.165/run) costs more than a tight 4K-token chat with Opus 4.7 ($0.07/run).
+
+#### Performance-per-dollar leaders under token pricing
+
+Combining SWE-bench bash-only resolve rate with the typical-chat token cost (4K in + 2K out at provider list price):
+
+| Tier | Model | SWE-bench Bash-Only | Typical Chat Cost | % Resolved per $1 |
+|------|-------|:-------------------:|:-----------------:|:-----------------:|
+| 🆓 Free-tier replacement | **GPT-5 mini** | 56.2% | $0.005 | **11,240** |
+| 💰 Best budget premium | **Claude Haiku 4.5** | 66.6% | $0.014 | 4,757 |
+| ⚖️ Best mid-tier value | **Gemini 3 Pro / 3.1 Pro** | 69.6–74.2% | $0.032 | 2,318 |
+| ⚖️ Mid-tier alternative | **GPT-5.2 / 5.2-Codex** | 69.0–72.8% | $0.035 | 2,080 |
+| 🏆 Best frontier value | **Claude Opus 4.6** | 75.6% | $0.070 | 1,080 |
+| 🏆 Frontier alternative | **Claude Opus 4.7** ¹ | ~76–78% ² | $0.070 | ~1,090 |
+| 🏆 Highest peak performance | **Claude 4.5 Opus (high reasoning)** | 76.8% | $0.070 | 1,097 |
+| ⚠️ Worst top-tier value | **GPT-5.5** | ~75% ² | $0.080 | ~940 |
+
+> ¹ Token-priced cost equals Opus 4.6 (same $5/$25 list rates). ² Estimated from family — no public bash-only score yet at the time of this writing.
+
+**Reading the table:**
+- **GPT-5 mini's lead is real** — even when no longer free, it delivers more SWE-bench % per dollar than any other model. Make it your reflex default for routine code.
+- **Gemini 3 Pro / 3.1 Pro emerges as the new mid-tier sweet spot.** Under PRU pricing it was indistinguishable from GPT-5.2 (both 1×). Under tokens, Gemini's $2/$12 rates beat OpenAI's $1.75/$14 on a typical chat **and** Gemini Flash at $0.5/$3 unlocks an even cheaper sub-tier with strong multilingual scores (72.7%).
+- **Claude Opus becomes the obvious frontier choice.** All three Opus generations price identically ($5/$25), so you should always pick the *latest* (4.7 → 4.6 → 4.5) for the same dollar. The 1.25× → 7.5× PRU jump that made 4.7 prohibitive disappears entirely.
+- **GPT-5.5 loses its rationale.** It costs **20% more** than Opus 4.7 token-for-token while landing in the same performance band. Under PRU they were tied at 7.5×; under tokens, Opus 4.7 becomes the strictly better pick for premium tasks.
+
+#### Recommendations by user persona
+
+| Persona | Today (PRU) | Token-Based World | Why It Changes |
+|---------|-------------|-------------------|----------------|
+| **Casual user** (≤50 chats/mo) | GPT-5 mini, occasional Sonnet 4.5 | GPT-5 mini for routine; Haiku 4.5 for anything non-trivial | $0.25–$0.70/month at most — pricing model barely matters |
+| **Daily developer** (200–500 chats/mo) | Sonnet 4.5/4.6 (1×), Haiku for triage | **Gemini 3.1 Pro** as default; Opus 4.6/4.7 for hard problems | Gemini 3.1 Pro at $0.032/chat undercuts Sonnet ($0.042) with similar SWE-bench scores |
+| **Power user** (1K+ chats/mo) | Mostly 1× models, sparing Opus | Opus 4.7 freely; reserve only for genuinely simple tasks | Opus 4.7 drops from $0.30 → $0.07/chat — 4× cheaper than today's PRU rate |
+| **Agentic-workflow heavy** (Copilot CLI / cloud agent users) | PRU's "tool calls don't count" rule keeps cost flat regardless of model size | **All tokens billed.** Match model to task aggressively: Haiku/Flash for traversal, Opus only for synthesis | This is where token pricing hurts — a 50K-token agent run on Opus 4.7 is $0.65; the same on Haiku 4.5 is $0.13 |
+| **Multilingual codebase team** | Sonnet 4.5 + occasional Gemini 3 Pro | **Gemini 3 Flash** as default (72.7% multilingual @ $0.50/$3); Opus 4.6 (72% multilingual) only for the hardest patches | Gemini 3 Flash leads multilingual SWE-bench at 1/4 the cost of Sonnet |
+| **Open-source-curious** | n/a — open weights aren't in Copilot | If GitHub adds them, **DeepSeek V3.2** ($1.14/$4.56) and **GLM-5** become genuine options at 70–73% SWE-bench | Token pricing makes open-weight provider economics legible — they win on $/% of any closed model except mini variants |
+| **Enterprise / data-residency** | +10% data-residency multiplier on top of PRU | Same +10% on tokens — but now also pay for cached-input on long system prompts | Watch context-caching discounts (Anthropic 90% off cached reads); a stable 10K-token system prompt cached at $0.50/MTok is virtually free |
+
+#### Recommendations by task type
+
+| Task Type | Token-Pricing Recommendation | Estimated Cost / Task | Why |
+|-----------|------------------------------|:---------------------:|-----|
+| Boilerplate, autocomplete, single-line edits | GPT-5 mini | $0.005 | 56% SWE-bench is overkill for this — anything cheaper will do |
+| Quick code Q&A, tight refactors | Claude Haiku 4.5 | $0.014 | 66.6% SWE-bench at near-mini cost; better tone/instruction-following than mini |
+| General coding, unit tests, debugging | **Gemini 3.1 Pro** *or* GPT-5.2-Codex | $0.032–0.035 | Best mid-tier balance; Codex variant for OpenAI-loyalty teams |
+| Multilingual / polyglot work | **Gemini 3 Flash** (high reasoning) | $0.008 | 72.7% multilingual #1 at 6× cheaper than Sonnet |
+| Multi-file refactors, architectural changes | **Claude Opus 4.6 or 4.7** | $0.070 | 75–77% SWE-bench, no longer rationed under tokens |
+| Hardest bugs, legacy-codebase deep-dives | Claude 4.5 Opus (high reasoning) + an agent scaffold (live-SWE-agent / Sonar) | $0.20–1.00 (varies with agent loop length) | Top-of-leaderboard performance; per-instance leaderboard cost is $0.75 |
+| Visual / multimodal issues (screenshots, mockups) | OpenHands-Versa + Claude Sonnet 4 *or* GUIRepair + o3 | $0.05–0.30 | Only systems above 30% on SWE-bench Multimodal |
+| High-volume agent loops (Copilot CLI runs) | Tier within a single task: **Haiku** for file reads/searches, **Opus** for the synthesis turn | varies | Token billing rewards routing — most tokens come from low-value traversal |
+
+#### Strategy shifts to make on day one
+
+1. **Stop treating GPT-5 mini as "free, so use it everywhere."** Pricing levels — but it's still the cheapest. Use it where 56% solve-rate is actually enough; promote everything else to Haiku 4.5.
+2. **Collapse Sonnet → Gemini 3.1 Pro for general coding.** Gemini wins on $/% under token math (76.8 cents vs 95 cents per SWE-bench point) and matches Sonnet on most real-world tasks.
+3. **Stop rationing Opus.** The PRU-era habit of "save 1.25× / 7.5× models for emergencies" is exactly wrong under tokens — Opus 4.6/4.7 is *cheaper per dollar of solve-rate* than every model except the budget tier.
+4. **Replace GPT-5.5 with Opus 4.7.** Same performance band, 12.5% lower token cost, plus stronger SWE-bench evidence.
+5. **Aggressively cache long system prompts.** Anthropic's $0.50 cached read vs $5 input (90% off) and Gemini's similar discount make stable prompts ~10× cheaper. PRU never rewarded this — token billing absolutely does.
+6. **Audit agentic workflows for token bloat.** Under PRU only the user prompt counted; under tokens, every tool call response, every file read, every reasoning trace bills. Tighten retrieval scopes, summarize long tool outputs, and consider mid-agent model downgrades.
+7. **Watch for batch-API access.** Anthropic and xAI both offer 50% off batched processing. Useful for nightly codebase analysis, bulk PR review, or test generation — none of which fit the synchronous PRU model but all of which become natural under tokens.
+
+#### When PRU is still the better deal
+
+Token pricing isn't universally better. Stay on PRU (or fight to keep it) if you are:
+
+- **A heavy free-tier user** of GPT-5 mini / GPT-4.1 / GPT-4o on a paid plan — you currently pay $0/chat. Tokens introduce $0.005–$0.030/chat overnight.
+- **A predictable-budget enterprise buyer** — finance teams forecast PRU consumption easily; per-token spend has 10–100× variance depending on context size.
+- **A user of mid-tier 1× / 1.25× models exclusively** — these are roughly token-cost-neutral, and PRU's "tool calls don't count" rule is a real subsidy for agentic workflows.
+
+For everyone outside those buckets — and especially for power users of Opus, GPT-5.5, or any agent-heavy workflow that isn't dominated by tool-call traffic — token pricing is a net win, *provided* you adjust model selection per the recommendations above.
 
 ---
 
