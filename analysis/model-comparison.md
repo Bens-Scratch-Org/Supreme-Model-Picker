@@ -443,6 +443,125 @@ Auto mode provides a 10% multiplier discount (e.g., 1x → 0.9x), letting Copilo
 | Complex SWE, deep debugging | Claude Opus 4.5 or 4.6 | 1.25x | Top SWE-bench at modest premium |
 | Critical reasoning, architecture | Claude Opus 4.7 / GPT-5.5 | 7.5x | Only when nothing else will do |
 
+### Hypothetical: Token-Based Pricing Scenario
+
+> **Scenario:** What if GitHub switched Copilot from the current Premium Request Unit (PRU) model to direct token-based billing — while keeping the existing model multipliers as cost weighting factors?
+
+#### Provider Direct API Pricing (per 1M tokens)
+
+This is what each model actually costs at the provider level:
+
+| Model | Provider | Input $/MTok | Output $/MTok | Cached Input $/MTok |
+|-------|----------|:------------:|:-------------:|:-------------------:|
+| **GPT-5.5** | OpenAI | $5.00 | $30.00 | $0.50 |
+| **GPT-5.4** | OpenAI | $2.50 | $15.00 | $0.25 |
+| **GPT-5.4 mini** | OpenAI | $0.75 | $4.50 | $0.07 |
+| **GPT-5.2** | OpenAI | $1.75 | $14.00 | $0.17 |
+| **GPT-5 mini** | OpenAI | $0.25 | $2.00 | $0.02 |
+| **GPT-4.1** | OpenAI | $2.00 | $8.00 | $0.50 |
+| **GPT-4.1 mini** | OpenAI | $0.40 | $1.60 | $0.10 |
+| **GPT-4o** | OpenAI | $2.50 | $10.00 | $1.25 |
+| **GPT-4o mini** | OpenAI | $0.15 | $0.60 | $0.07 |
+| **Claude Opus 4.7** | Anthropic | $5.00 | $25.00 | $0.50 |
+| **Claude Opus 4.6** | Anthropic | $5.00 | $25.00 | $0.50 |
+| **Claude Opus 4.5** | Anthropic | $5.00 | $25.00 | $0.50 |
+| **Claude Sonnet 4.6** | Anthropic | $3.00 | $15.00 | $0.30 |
+| **Claude Sonnet 4.5** | Anthropic | $3.00 | $15.00 | $0.30 |
+| **Claude Haiku 4.5** | Anthropic | $1.00 | $5.00 | $0.10 |
+| **Gemini 3.1 Pro** | Google | $2.00 | $12.00 | $0.20 |
+| **Gemini 3 Pro** | Google | $2.00 | $12.00 | $0.20 |
+| **Gemini 3 Flash** | Google | $0.50 | $3.00 | $0.05 |
+| **Gemini 2.5 Pro** | Google | $1.25 | $10.00 | $0.12 |
+| **Gemini 2.5 Flash** | Google | $0.30 | $2.50 | $0.03 |
+| **Grok 4** | xAI | $3.00 | $15.00 | — |
+| **Grok 3** | xAI | $3.00 | $15.00 | $0.75 |
+| **Grok 3 Mini** | xAI | $0.30 | $0.50 | $0.07 |
+
+#### Cost per Copilot Interaction: PRU vs Token-Based
+
+Assuming a typical coding chat interaction of **~4,000 input tokens** (system prompt + code context + user query) and **~2,000 output tokens** (code response):
+
+| Model | Copilot PRU Multiplier | PRU Cost ($0.04 × mult) | Token Cost (4K in + 2K out) | Token Cost Ratio vs PRU | Who Wins? |
+|-------|:----------------------:|:-----------------------:|:---------------------------:|:-----------------------:|:---------:|
+| GPT-5 mini | 0x (free) | **$0.00** | $0.005 | — | PRU 🏆 |
+| GPT-4.1 | 0x (free) | **$0.00** | $0.024 | — | PRU 🏆 |
+| GPT-4o | 0x (free) | **$0.00** | $0.030 | — | PRU 🏆 |
+| Claude Haiku 4.5 | 0.25x | **$0.010** | $0.014 | 1.4x | PRU 🏆 |
+| GPT-5.4 mini | 0.25x | **$0.010** | $0.012 | 1.2x | PRU 🏆 |
+| GPT-5.2 | 1x | **$0.040** | $0.035 | 0.88x | Tokens 🏆 |
+| Claude Sonnet 4.5 | 1x | **$0.040** | $0.042 | 1.05x | ~Tie |
+| Claude Sonnet 4.6 | 1x | **$0.040** | $0.042 | 1.05x | ~Tie |
+| Gemini 3.1 Pro | 1x | **$0.040** | $0.032 | 0.80x | Tokens 🏆 |
+| Gemini 2.5 Pro | 1x | **$0.040** | $0.025 | 0.63x | Tokens 🏆 |
+| GPT-5.4 | 1.25x | **$0.050** | $0.040 | 0.80x | Tokens 🏆 |
+| Claude Opus 4.5 | 1.25x | **$0.050** | $0.070 | 1.40x | PRU 🏆 |
+| Claude Opus 4.6 | 1.25x | **$0.050** | $0.070 | 1.40x | PRU 🏆 |
+| GPT-5.5 | 7.5x | **$0.300** | $0.080 | 0.27x | Tokens 🏆🏆🏆 |
+| Claude Opus 4.7 | 7.5x | **$0.300** | $0.070 | 0.23x | Tokens 🏆🏆🏆 |
+
+> Token costs assume 4K input + 2K output tokens. Real interactions vary — agentic workflows may use 10-100x more tokens.
+
+#### Impact Analysis: Who Benefits from Each Pricing Model?
+
+**Users who benefit from current PRU model:**
+- Heavy users of **included models** (GPT-5 mini, GPT-4.1, GPT-4o) — these are completely free on paid plans
+- Users of **budget premium models** (Haiku 4.5, GPT-5.4 mini) — 0.25x multiplier is an excellent deal
+- Users of **Claude Opus 4.5/4.6** — the 1.25x multiplier significantly under-prices the actual $0.07/interaction token cost
+
+**Users who would benefit from token-based pricing:**
+- Heavy users of **ultra-premium models** (GPT-5.5, Claude Opus 4.7) — the 7.5x multiplier massively overcharges versus actual token cost ($0.30 vs ~$0.07-0.08)
+- Users of **Gemini models** — Gemini is consistently cheaper at the token level than its Copilot multiplier suggests
+- Users of **GPT-5.4** — actual token cost ($0.04) is 20% less than the 1.25x PRU cost ($0.05)
+
+#### The Hidden Subsidy Structure
+
+The PRU multiplier system creates an internal subsidy structure:
+
+```
+Overcharged (subsidizing others)          │  Undercharged (subsidized)
+──────────────────────────────────────────┼──────────────────────────────
+Claude Opus 4.7   $0.30 PRU vs $0.07 tok │  GPT-5 mini    $0.00 PRU vs $0.005 tok
+GPT-5.5           $0.30 PRU vs $0.08 tok │  GPT-4.1       $0.00 PRU vs $0.024 tok
+                                          │  GPT-4o        $0.00 PRU vs $0.030 tok
+Gemini 2.5 Pro    $0.04 PRU vs $0.025 tok│  Opus 4.5/4.6  $0.05 PRU vs $0.070 tok
+Gemini 3.1 Pro    $0.04 PRU vs $0.032 tok│  Haiku 4.5     $0.01 PRU vs $0.014 tok
+```
+
+**Key insight:** The 7.5x ultra-premium models are priced at **3.8–4.3x their actual token cost**, while included models are offered at a 100% discount. This means users of Claude Opus 4.7 and GPT-5.5 are effectively subsidizing the free tier. If GitHub switched to token-based pricing, ultra-premium users would save ~$0.22/interaction, but included-model users would start paying ~$0.005–$0.03/interaction.
+
+#### Hypothetical Token-Based Monthly Costs
+
+For a developer making **200 coding interactions/month** with their primary model:
+
+| Model | Current PRU Cost (200 chats) | Token Cost (200 chats) | Monthly Savings/Penalty |
+|-------|:---------------------------:|:----------------------:|:-----------------------:|
+| GPT-5 mini | **$0.00** | $1.00 | -$1.00 ⬇️ |
+| GPT-4.1 | **$0.00** | $4.80 | -$4.80 ⬇️ |
+| GPT-4o | **$0.00** | $6.00 | -$6.00 ⬇️ |
+| Claude Haiku 4.5 | **$2.00** | $2.80 | -$0.80 ⬇️ |
+| GPT-5.2 | **$8.00** | $7.00 | +$1.00 ⬆️ |
+| Claude Sonnet 4.6 | **$8.00** | $8.40 | -$0.40 ⬇️ |
+| Gemini 3.1 Pro | **$8.00** | $6.40 | +$1.60 ⬆️ |
+| Claude Opus 4.6 | **$10.00** | $14.00 | -$4.00 ⬇️ |
+| GPT-5.5 | **$60.00** | $16.00 | +$44.00 ⬆️ |
+| Claude Opus 4.7 | **$60.00** | $14.00 | +$46.00 ⬆️ |
+
+> Assumes 4K input + 2K output tokens per interaction. PRU costs use $0.04/premium request × multiplier. Included models show only overage cost (free within plan allowance).
+
+#### Token-Based Pricing: Verdict
+
+| Factor | PRU Model (Current) | Token-Based (Hypothetical) |
+|--------|:-------------------:|:--------------------------:|
+| **Simplicity** | ✅ Simple per-request billing | ❌ Complex per-token metering |
+| **Predictability** | ✅ Fixed cost per chat | ❌ Varies by prompt length |
+| **Free tier value** | ✅ 3 models completely free | ❌ Every interaction has a cost |
+| **Ultra-premium fairness** | ❌ 7.5x massively overcharges | ✅ Pay actual cost |
+| **Budget management** | ✅ Easy to forecast monthly spend | ❌ Hard to predict token usage |
+| **Agentic workflows** | ✅ Only user prompts count | ❌ All tokens billed (expensive for agents) |
+| **Power user value** | ❌ Penalizes heavy Opus/GPT-5.5 users | ✅ Pay proportional to usage |
+
+**Bottom line:** The PRU model strongly favors casual-to-moderate users who stay within included models and occasionally use standard premium. Token-based pricing would dramatically benefit heavy users of ultra-premium models but would remove the zero-cost included tier that makes Copilot's baseline so attractive. The current PRU system is likely a deliberate strategic choice: subsidize the premium tier from ultra-premium overcharges while keeping the base experience free to maximize adoption.
+
 ---
 
 ## Best-Suited Use Cases
@@ -515,6 +634,11 @@ Auto mode provides a 10% multiplier discount (e.g., 1x → 0.9x), letting Copilo
 - **GitHub Models Billing:** [docs.github.com](https://docs.github.com/en/billing/concepts/product-billing/github-models)
 - **Copilot Supported Models & Multipliers:** [docs.github.com](https://docs.github.com/en/copilot/reference/ai-models/supported-models)
 - **Copilot Auto Model Selection:** [docs.github.com](https://docs.github.com/en/copilot/concepts/auto-model-selection)
+- **Anthropic API Pricing:** [anthropic.com/pricing](https://www.anthropic.com/pricing)
+- **Google Vertex AI Pricing:** [cloud.google.com](https://cloud.google.com/vertex-ai/generative-ai/pricing)
+- **OpenAI API Pricing:** via [LiteLLM model prices](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json) and Azure OpenAI
+- **xAI API Pricing:** [docs.x.ai/docs/models](https://docs.x.ai/docs/models)
+- **LiteLLM Model Pricing Database:** [github.com/BerriAI/litellm](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)
 - **mini-SWE-agent:** [github.com/SWE-agent/mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent)
 
 ---
