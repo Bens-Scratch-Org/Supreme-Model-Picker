@@ -1,8 +1,14 @@
 # AI Model Analysis: SWE-bench, Scale Labs & GitHub Copilot Cost Analysis
 
-> **Last updated:** April 2026
+> **Last updated:** April 25, 2026
 >
 > A comprehensive analysis of frontier AI models across software engineering, coding, and general capability benchmarks sourced from [SWE-bench](https://www.swebench.com/) and [Scale Labs](https://labs.scale.com/), combined with a cost/performance analysis using [GitHub Copilot](https://docs.github.com/en/copilot/concepts/billing/copilot-requests) and [GitHub Models](https://docs.github.com/en/billing/reference/costs-for-github-models) pricing.
+
+> [!CAUTION]
+> **Claude Opus 4.7's promotional 7.5x multiplier expires April 30, 2026.** After this date, the multiplier is expected to increase significantly. If you rely on Opus 4.7 in Copilot, budget accordingly.
+
+> [!NOTE]
+> **Copilot Pro, Pro+, and Student signups are temporarily paused** as of April 20, 2026 ([source](https://docs.github.com/en/copilot/about-github-copilot/subscription-plans-for-github-copilot)). Existing subscribers are unaffected. GPT-5.5 was released on April 23, 2026.
 
 ---
 
@@ -291,6 +297,10 @@ GitHub Copilot offers tiered plans with different premium request allowances. On
 | **Copilot Enterprise** | $39/seat/mo | 1,000/user | $0.04/request | GPT-5 mini, GPT-4.1, GPT-4o (0x) |
 
 > **Key concept:** On Copilot Free, every model costs 1 premium request per interaction. On paid plans, included models are free, and premium models deduct from your allowance based on their multiplier. Additional premium requests beyond your allowance cost **$0.04 each**.
+>
+> **Agentic billing:** For agentic features (Copilot CLI, Copilot cloud agent, etc.), only the prompts **you** send count as premium requests. Actions Copilot takes autonomously — such as tool calls, file reads, and intermediate reasoning — do **not** consume premium requests.
+>
+> **Data residency surcharge:** For GitHub Enterprise Cloud, requests processed with data residency or FedRAMP enforcement include an additional **10% multiplier** on top of the model's base multiplier.
 
 ### Copilot Premium Request Multipliers
 
@@ -321,7 +331,7 @@ Each premium model in Copilot has a multiplier that determines how many premium 
 | Claude Opus 4.7 | Anthropic | **7.5x** ² | — | Ultra Premium |
 | GPT-5.5 | OpenAI | **7.5x** ² | — | Ultra Premium |
 
-> ¹ Subject to change. ² Promotional multiplier — Claude Opus 4.7 promotional rate valid until April 30, 2026.
+> ¹ Subject to change. ² Promotional multipliers — Claude Opus 4.7 promotional rate valid until **April 30, 2026**; GPT-5.5 is also at a promotional 7.5x rate (no end date announced).
 
 ### GitHub Models Direct API Pricing
 
@@ -336,12 +346,14 @@ For direct API usage via [GitHub Models](https://docs.github.com/en/billing/refe
 | DeepSeek-R1 | 0.135 | 0.54 | $1.35 | $5.40 |
 | DeepSeek-R1-0528 | 0.135 | 0.54 | $1.35 | $5.40 |
 | DeepSeek-V3-0324 | 0.114 | 0.456 | $1.14 | $4.56 |
+| MAI-DS-R1 | 0.135 | 0.54 | $1.35 | $5.40 |
 | Grok 3 | 0.3 | 1.5 | $3.00 | $15.00 |
 | Grok 3 Mini | 0.025 | 0.127 | $0.25 | $1.27 |
 | Llama 4 Maverick 17B | 0.025 | 0.1 | $0.25 | $1.00 |
 | Llama-3.3-70B-Instruct | 0.071 | 0.071 | $0.71 | $0.71 |
 | Phi-4 | 0.0125 | 0.05 | $0.13 | $0.50 |
 | Phi-4-mini-instruct | 0.0075 | 0.03 | $0.08 | $0.30 |
+| Phi-4-multimodal-instruct | 0.008 | 0.032 | $0.08 | $0.32 |
 
 ### Cost-per-Performance Analysis
 
@@ -599,7 +611,7 @@ For a developer making **200 coding interactions/month** with their primary mode
 
 8. **Claude Haiku 4.5 is the Copilot cost king.** At 0.25x multiplier with 66.6% SWE-bench performance, it delivers 4x the interactions of 1x models — the best cost/performance ratio of any premium model in Copilot.
 
-9. **Claude Opus 4.5/4.6 at 1.25x is the sweet spot.** Just 25% more than standard premium models, but delivering the highest SWE-bench scores (75-77%). The 7.5x ultra-premium models (Opus 4.7, GPT-5.5) cost 6x more for marginal gains.
+9. **Claude Opus 4.5/4.6 at 1.25x is the sweet spot.** Just 25% more than standard premium models, but delivering the highest SWE-bench scores (75-77%). The 7.5x ultra-premium models (Opus 4.7, GPT-5.5) cost 6x more for marginal gains. Note: Opus 4.7's promotional 7.5x rate expires April 30, 2026 — expect a higher multiplier after that date.
 
 10. **GPT-5 mini is free and viable.** At 56.2% SWE-bench and 0x multiplier on paid Copilot plans, it can handle the majority of routine coding tasks at zero premium cost.
 
@@ -611,12 +623,14 @@ For a developer making **200 coding interactions/month** with their primary mode
 
 ## Methodology Notes
 
-- **SWE-bench Bash-Only** scores use [mini-SWE-agent v2.0](https://github.com/SWE-agent/mini-swe-agent) with a standardized ReAct loop and bash shell. This provides the fairest direct model comparison.
+- **SWE-bench Bash-Only** scores use [mini-SWE-agent v2.0](https://github.com/SWE-agent/mini-swe-agent) with a standardized ReAct loop and bash shell. This provides the fairest direct model comparison. Results from v1.x and v2.x may not be directly comparable due to differences in action invocation (string parsing vs. tool calling).
 - **SWE-bench Verified** allows any agent system. Scores reflect the best system built around each model.
 - **Scale Labs Showdown** uses blind pairwise comparisons with Elo-style ratings from organic user votes across 80+ countries.
 - Scores are pulled from the official leaderboard data as of **February–April 2026**.
 - Some models appear in multiple benchmarks; others are only tested in specific contexts.
 - "High reasoning" / "medium reasoning" denotes extended thinking/chain-of-thought modes enabled during inference.
+- **Copilot pricing** is based on the Premium Request Unit (PRU) model. For agentic features, only user-initiated prompts count — autonomous tool calls do not consume premium requests.
+- **Provider API pricing** was cross-referenced against Anthropic's published rates, GitHub Models docs, xAI docs, and the [LiteLLM pricing database](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json). All prices verified as of April 25, 2026.
 
 ---
 
