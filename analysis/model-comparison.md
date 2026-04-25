@@ -102,38 +102,44 @@ These results combine **any agent scaffold** with a language model. Scores refle
 
 This is the **apples-to-apples** comparison: every model runs through the same minimal [mini-SWE-agent](https://github.com/SWE-agent/mini-swe-agent) scaffold — a simple ReAct loop with just a bash shell. No custom tools, no special scaffolding.
 
-| Rank | Model | % Resolved | Avg Cost/Instance |
-|------|-------|-----------|-------------------|
-| 🥇 1 | Claude 4.5 Opus (high reasoning) | **76.8%** | $0.75 |
-| 🥈 2 | Gemini 3 Flash (high reasoning) | **75.8%** | — |
-| 🥈 2 | MiniMax M2.5 (high reasoning) | **75.8%** | — |
-| 4 | Claude Opus 4.6 | **75.6%** | — |
-| 5 | Claude 4.5 Opus medium | **74.4%** | — |
-| 6 | Gemini 3 Pro Preview | **74.2%** | — |
-| 7 | GPT-5-2 Codex | **72.8%** | — |
-| 7 | GLM-5 (high reasoning) | **72.8%** | — |
-| 7 | GPT-5-2 (high reasoning) | **72.8%** | — |
-| 10 | GPT-5.2 (high reasoning, Dec 2025) | **71.8%** | — |
-| 11 | Claude 4.5 Sonnet (high reasoning) | **71.4%** | — |
-| 12 | Kimi K2.5 (high reasoning) | **70.8%** | — |
-| 13 | Claude 4.5 Sonnet | **70.6%** | — |
-| 14 | DeepSeek V3.2 (high reasoning) | **70.0%** | — |
-| 15 | Gemini 3 Pro | **69.6%** | — |
-| 16 | GPT-5.2 | **69.0%** | — |
-| 17 | Claude 4 Opus | **67.6%** | — |
-| 18 | Claude 4.5 Haiku (high reasoning) | **66.6%** | — |
-| 19 | GPT-5.1-codex (medium reasoning) | **66.0%** | — |
-| 19 | GPT-5.1 (medium reasoning) | **66.0%** | — |
-| 21 | GPT-5 (medium reasoning) | **65.0%** | — |
-| 22 | Claude 4 Sonnet | **64.9%** | — |
-| 23 | Kimi K2 Thinking | **63.4%** | — |
-| 24 | Minimax M2 | **61.0%** | — |
-| 25 | DeepSeek V3.2 Reasoner | **60.0%** | — |
-| 26 | GPT-5 mini (medium reasoning) | **59.8%** | — |
-| 27 | o3 | **58.4%** | — |
-| 28 | Devstral small (2512) | **56.4%** | — |
-| 29 | GPT-5 Mini | **56.2%** | — |
-| 30 | Qwen3-Coder 480B/A35B Instruct | **55.4%** | — |
+Per-instance cost figures below are taken directly from the leaderboard's reported total run cost divided by 500 instances. They reflect provider list pricing at the time of the run, not Copilot multipliers.
+
+| Rank | Model | % Resolved | Avg Cost/Instance | Cost-Efficiency (% per $) |
+|------|-------|-----------|:-----------------:|:-------------------------:|
+| 🥇 1 | Claude 4.5 Opus (high reasoning) | **76.8%** | $0.754 | 102 |
+| 🥈 2 | Gemini 3 Flash (high reasoning) | **75.8%** | $0.356 | 213 |
+| 🥈 2 | MiniMax M2.5 (high reasoning) | **75.8%** | **$0.073** | **1,034** ⭐ |
+| 4 | Claude Opus 4.6 | **75.6%** | $0.552 | 137 |
+| 5 | Claude 4.5 Opus medium | **74.4%** | $0.721 | 103 |
+| 6 | Gemini 3 Pro Preview | **74.2%** | $0.460 | 161 |
+| 7 | GPT-5-2 Codex | **72.8%** | $0.449 | 162 |
+| 7 | GLM-5 (high reasoning) | **72.8%** | $0.534 | 136 |
+| 7 | GPT-5-2 (high reasoning) | **72.8%** | $0.474 | 154 |
+| 10 | GPT-5.2 (high reasoning, Dec 2025) | **71.8%** | $0.520 | 138 |
+| 11 | Claude 4.5 Sonnet (high reasoning) | **71.4%** | $0.658 | 109 |
+| 12 | Kimi K2.5 (high reasoning) | **70.8%** | $0.147 | **482** ⭐ |
+| 13 | Claude 4.5 Sonnet | **70.6%** | $0.558 | 126 |
+| 14 | DeepSeek V3.2 (high reasoning) | **70.0%** | $0.448 | 156 |
+| 15 | Gemini 3 Pro | **69.6%** | $0.960 | 73 |
+| 16 | GPT-5.2 | **69.0%** | $0.270 | 256 |
+| 17 | Claude 4 Opus | **67.6%** | $1.131 | 60 |
+| 18 | Claude 4.5 Haiku (high reasoning) | **66.6%** | $0.331 | 201 |
+| 19 | GPT-5.1-codex (medium reasoning) | **66.0%** | $0.589 | 112 |
+| 19 | GPT-5.1 (medium reasoning) | **66.0%** | $0.306 | 216 |
+| 21 | GPT-5 (medium reasoning) | **65.0%** | $0.280 | 232 |
+| 22 | Claude 4 Sonnet | **64.9%** | $0.372 | 175 |
+| 23 | Kimi K2 Thinking | **63.4%** | $0.438 | 145 |
+| 24 | Minimax M2 | **61.0%** | $0.428 | 142 |
+| 25 | DeepSeek V3.2 Reasoner | **60.0%** | **$0.028** | **2,137** ⭐ |
+| 26 | GPT-5 mini (medium reasoning) | **59.8%** | $0.035 | **1,685** ⭐ |
+| 27 | o3 | **58.4%** | $0.334 | 175 |
+| 28 | Devstral small (2512) | **56.4%** | n/a ¹ | — |
+| 29 | GPT-5 Mini | **56.2%** | $0.047 | **1,191** ⭐ |
+| 30 | Qwen3-Coder 480B/A35B Instruct | **55.4%** | $0.248 | 223 |
+
+> ¹ Devstral run used a free local/self-hosted endpoint; per-instance dollar cost is therefore not reported on the leaderboard.
+>
+> **Cost-efficiency winners** (% Resolved per $1 spent): DeepSeek V3.2 Reasoner, GPT-5 mini, GPT-5 Mini, MiniMax M2.5, and Kimi K2.5 deliver dramatically more solve-rate per dollar than the top-of-leaderboard Claude/Gemini Pro models. **MiniMax M2.5 is the standout**: it ties Gemini 3 Flash for #2 raw performance at roughly **5x lower cost** ($0.073 vs $0.356 per instance) and only 1.0pp behind the #1 Claude 4.5 Opus run that costs **10x more**. **Gemini 3 Pro is the worst value in the top tier** at $0.96/instance for 69.6% — more expensive than Claude 4.5 Opus while solving 7.2pp fewer instances.
 
 ### SWE-bench Multilingual
 
@@ -161,8 +167,8 @@ Issues containing visual elements — 517 instances.
 
 | Rank | System | % Resolved |
 |------|--------|-----------|
-| 🥇 1 | GUIRepair + o3 | **35.98%** |
-| 🥇 1 | Codefuse_Pycfuse_SVR | **35.98%** |
+| 🥇 1 | GUIRepair + o3 | **35.98%** ¹ |
+| 🥇 1 | Codefuse_Pycfuse_SVR | **35.98%** ² |
 | 🥉 3 | Refact.ai Agent | **35.59%** |
 | 4 | OpenHands-Versa (Claude-Sonnet 4) | **34.43%** |
 | 5 | GUIRepair + o4-mini | **33.85%** |
@@ -171,6 +177,8 @@ Issues containing visual elements — 517 instances.
 | 8 | Zencoder | **30.56%** |
 | 9 | GUIRepair + GPT 4o | **30.37%** |
 | 10 | Globant Code Fixer Agent | **29.59%** |
+
+> ¹ GUIRepair + o3 result dated July 2025. ² Codefuse_Pycfuse_SVR result dated November 2025 — the most recent submission at the joint #1 score.
 
 ### Scale Labs Showdown — Human Preference
 
@@ -467,9 +475,13 @@ This is what each model actually costs at the provider level:
 |-------|----------|:------------:|:-------------:|:-------------------:|
 | **GPT-5.5** | OpenAI | $5.00 | $30.00 | $0.50 |
 | **GPT-5.4** | OpenAI | $2.50 | $15.00 | $0.25 |
-| **GPT-5.4 mini** | OpenAI | $0.75 | $4.50 | $0.07 |
-| **GPT-5.2** | OpenAI | $1.75 | $14.00 | $0.17 |
-| **GPT-5 mini** | OpenAI | $0.25 | $2.00 | $0.02 |
+| **GPT-5.4 mini** | OpenAI | $0.75 | $4.50 | $0.075 |
+| **GPT-5.3-Codex** | OpenAI | $1.75 | $14.00 | $0.175 |
+| **GPT-5.2-Codex** | OpenAI | $1.75 | $14.00 | $0.175 |
+| **GPT-5.2** | OpenAI | $1.75 | $14.00 | $0.175 |
+| **GPT-5.1** | OpenAI | $1.25 | $10.00 | $0.125 |
+| **GPT-5** | OpenAI | $1.25 | $10.00 | $0.125 |
+| **GPT-5 mini** | OpenAI | $0.25 | $2.00 | $0.025 |
 | **GPT-4.1** | OpenAI | $2.00 | $8.00 | $0.50 |
 | **GPT-4.1 mini** | OpenAI | $0.40 | $1.60 | $0.10 |
 | **GPT-4o** | OpenAI | $2.50 | $10.00 | $1.25 |
@@ -483,11 +495,11 @@ This is what each model actually costs at the provider level:
 | **Gemini 3.1 Pro** | Google | $2.00 | $12.00 | $0.20 |
 | **Gemini 3 Pro** | Google | $2.00 | $12.00 | $0.20 |
 | **Gemini 3 Flash** | Google | $0.50 | $3.00 | $0.05 |
-| **Gemini 2.5 Pro** | Google | $1.25 | $10.00 | $0.12 |
+| **Gemini 2.5 Pro** | Google | $1.25 | $10.00 | $0.125 |
 | **Gemini 2.5 Flash** | Google | $0.30 | $2.50 | $0.03 |
 | **Grok 4** | xAI | $3.00 | $15.00 | — |
 | **Grok 3** | xAI | $3.00 | $15.00 | $0.75 |
-| **Grok 3 Mini** | xAI | $0.30 | $0.50 | $0.07 |
+| **Grok 3 Mini** | xAI | $0.30 | $0.50 | $0.075 |
 
 #### Cost per Copilot Interaction: PRU vs Token-Based
 
@@ -615,22 +627,27 @@ For a developer making **200 coding interactions/month** with their primary mode
 
 10. **GPT-5 mini is free and viable.** At 56.2% SWE-bench and 0x multiplier on paid Copilot plans, it can handle the majority of routine coding tasks at zero premium cost.
 
-11. **Open-weight models are competitive but trail.** DeepSeek V3.2 (70%) and GLM-5 (72.8%) are within striking distance of proprietary leaders, making self-hosted coding assistants increasingly practical.
+11. **Open-weight models are competitive but trail.** DeepSeek V3.2 (70%) and GLM-5 (72.8%) are within striking distance of proprietary leaderboards leaders, making self-hosted coding assistants increasingly practical.
 
-12. **The benchmark landscape is fragmenting.** SWE-bench and Scale Labs measure very different things — autonomous bug fixing vs. human preference — and top models differ across these axes. Choose your benchmark based on your use case.
+12. **Cost-per-instance reveals huge value gaps.** The bash-only leaderboard's per-instance cost data shows MiniMax M2.5 hits 75.8% for **$0.07/instance** — within 1pp of the #1 Claude 4.5 Opus run that costs **$0.75/instance** (10x more). Open-weight models like DeepSeek V3.2 Reasoner ($0.03) and Kimi K2.5 ($0.15) deliver 60–71% solve rates at a fraction of frontier pricing. Conversely, Gemini 3 Pro at **$0.96/instance** for only 69.6% is the worst headline value of any top-20 model.
+
+13. **The benchmark landscape is fragmenting.** SWE-bench and Scale Labs measure very different things — autonomous bug fixing vs. human preference — and top models differ across these axes. Choose your benchmark based on your use case.
 
 ---
 
 ## Methodology Notes
 
 - **SWE-bench Bash-Only** scores use [mini-SWE-agent v2.0](https://github.com/SWE-agent/mini-swe-agent) with a standardized ReAct loop and bash shell. This provides the fairest direct model comparison. Results from v1.x and v2.x may not be directly comparable due to differences in action invocation (string parsing vs. tool calling).
+- **SWE-bench Bash-Only per-instance costs** are taken from the official leaderboard's reported `cost` field (total dollars across the 500-instance evaluation) divided by 500. Rows where the model provider's run used a free/local endpoint (e.g., Devstral) report no dollar cost on the leaderboard.
 - **SWE-bench Verified** allows any agent system. Scores reflect the best system built around each model.
-- **Scale Labs Showdown** uses blind pairwise comparisons with Elo-style ratings from organic user votes across 80+ countries.
+- **Scale Labs Showdown** uses blind pairwise comparisons with Elo-style ratings from organic user votes across 80+ countries. Elo ratings shift continuously as new votes arrive — figures here are a snapshot.
 - Scores are pulled from the official leaderboard data as of **February–April 2026**.
 - Some models appear in multiple benchmarks; others are only tested in specific contexts.
 - "High reasoning" / "medium reasoning" denotes extended thinking/chain-of-thought modes enabled during inference.
 - **Copilot pricing** is based on the Premium Request Unit (PRU) model. For agentic features, only user-initiated prompts count — autonomous tool calls do not consume premium requests.
 - **Provider API pricing** was cross-referenced against Anthropic's published rates, GitHub Models docs, xAI docs, and the [LiteLLM pricing database](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json). All prices verified as of April 25, 2026.
+- **Model release dates verified via LiteLLM dated entries:** GPT-5.5 → `gpt-5.5-2026-04-23`, Claude Opus 4.7 → `claude-opus-4-7-20260416`, Claude Opus 4.6 → `claude-opus-4-6-20260205`, GPT-5.4 → `gpt-5.4-2026-03-05`, GPT-5.2 → `gpt-5.2-2025-12-11`, Claude Opus 4.5 → `claude-opus-4-5-20251101`.
+- **Validation pass (April 25, 2026):** Every SWE-bench score in this document was reconciled against [`data/leaderboards.json`](https://raw.githubusercontent.com/SWE-bench/swe-bench.github.io/master/data/leaderboards.json) on the official `swe-bench.github.io` repo. Provider list prices (Anthropic Opus 4.5/4.6/4.7, Sonnet 4/4.5/4.6, Haiku 4.5; OpenAI GPT-5/5.1/5.2/5.3-Codex/5.4/5.4-mini/5.5/4.1/4o; Google Gemini 2.5 Pro/Flash, Gemini 3 Pro/Flash, Gemini 3.1 Pro; xAI Grok 3/3-Mini/4) were re-checked against LiteLLM's dated `model_prices_and_context_window.json` entries and matched to the cent. GitHub Copilot multipliers and the 7.5x promotional notes for Opus 4.7 (until 2026-04-30) and GPT-5.5 were re-verified against `docs.github.com/en/copilot/reference/ai-models/supported-models`.
 
 ---
 
