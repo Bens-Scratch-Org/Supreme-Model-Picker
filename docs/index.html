@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>If GitHub Went Token-Based · A Copilot Pricing Data Story</title>
+<meta name="description" content="An interactive D3.js walkthrough of what would change if GitHub Copilot moved from PRU billing to direct token-based pricing.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%231f6feb' d='M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.7 7.7 0 018 4.6c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>Copilot Pricing · A Data Story</span>
+    </div>
+    <nav class="nav-links">
+      <a href="#question">The question</a>
+      <a href="#multipliers">PRU today</a>
+      <a href="#subsidy">The subsidy</a>
+      <a href="#scatter">Cost vs perf</a>
+      <a href="#calculator">Calculator</a>
+      <a href="#personas">Who wins</a>
+      <a href="#verdict">Verdict</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <span class="eyebrow">A Copilot pricing thought-experiment</span>
+  <h1>If GitHub dropped <span class="accent">PRU billing</span> for <span class="accent">tokens</span>, who actually wins?</h1>
+  <p class="lede">
+    GitHub Copilot meters most models in <em>premium request units</em> — fixed-price chats with
+    a per-model multiplier. Direct API providers meter in tokens. These two systems disagree
+    sharply about what the same conversation should cost. This is a walkthrough of that
+    disagreement, built on the data in
+    <a href="https://github.com/Bens-Scratch-Org/Supreme-Model-Picker/blob/main/analysis/model-comparison.md"><code>analysis/model-comparison.md</code></a>.
+  </p>
+  <div class="hero-stats">
+    <div class="stat-card down">
+      <div class="label">Heaviest PRU markup</div>
+      <div class="value" id="kpi-markup">—</div>
+      <div class="sub">Claude Opus 4.7 / GPT-5.5 vs. their list-price tokens</div>
+    </div>
+    <div class="stat-card up">
+      <div class="label">Biggest hidden subsidy</div>
+      <div class="value" id="kpi-subsidy">—</div>
+      <div class="sub">GPT-4o on a paid plan: $0/chat in PRU</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Models surveyed</div>
+      <div class="value" id="kpi-count">—</div>
+      <div class="sub">Across OpenAI, Anthropic, Google &amp; more</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Typical chat sized at</div>
+      <div class="value">4K + 2K</div>
+      <div class="sub">Input + output tokens (per the source analysis)</div>
+    </div>
+  </div>
+</div>
+
+<!-- 1. THE QUESTION -->
+<section id="question" class="no-border">
+  <h2><span class="num">1</span>The question</h2>
+  <p class="section-lede">
+    On a paid Copilot plan today, a chat with <strong>GPT-4o costs $0</strong>, a chat with
+    <strong>Claude Opus 4.7 costs $0.30</strong>, and the <em>actual provider token cost</em>
+    of those two conversations is roughly <strong>$0.03</strong> and <strong>$0.07</strong> respectively.
+    PRU and tokens disagree by an order of magnitude in opposite directions. So — what would
+    actually move if GitHub flipped the switch?
+  </p>
+  <div class="callout">
+    <strong>Three things change on day one.</strong>
+    Included models stop being free. Ultra-premium gets ~4× cheaper. And what drives your
+    bill stops being <em>which model</em> and starts being <em>how many tokens you sent it</em>.
+  </div>
+</section>
+
+<!-- 2. PRU MULTIPLIERS TODAY -->
+<section id="multipliers">
+  <h2><span class="num">2</span>The world we live in: PRU multipliers</h2>
+  <p class="section-lede">
+    Every Copilot model has a multiplier — the number of premium requests one chat consumes.
+    Five tiers, ranging from <strong>0× (free)</strong> to <strong>7.5× (ultra-premium)</strong>.
+    A 1× chat costs $0.04 in overage; a 7.5× chat costs $0.30. Hover any bar for details.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Copilot premium-request multiplier by model</div>
+    <div class="chart-sub">Higher = more PRU consumed per chat. The 0× tier is free on paid plans.</div>
+    <div id="chart-multipliers"></div>
+    <div class="legend" id="legend-multipliers"></div>
+  </div>
+</section>
+
+<!-- 3. HIDDEN SUBSIDY -->
+<section id="subsidy">
+  <h2><span class="num">3</span>The hidden subsidy</h2>
+  <p class="section-lede">
+    Subtracting the actual provider-token cost of a typical 4K-in / 2K-out chat from the
+    PRU charge for that same chat reveals who is over- and under-charged. <strong>Bars to the
+    right</strong> overpay through PRU (subsidizing other users); <strong>bars to the left</strong> get
+    a discount.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">PRU price minus actual token cost · per chat</div>
+    <div class="chart-sub">Positive (right) = PRU overcharges &middot; Negative (left) = PRU undercharges &middot; Free models pay nothing in PRU but tokens would meter</div>
+    <div id="chart-subsidy"></div>
+  </div>
+  <div class="callout warn">
+    <strong>The 7.5× tier funds the free tier.</strong>
+    Claude Opus 4.7 and GPT-5.5 are priced at <em>3.8&ndash;4.3× their actual token cost</em>,
+    while GPT-5 mini, GPT-4.1 and GPT-4o are offered at a 100% discount. Token-based
+    pricing would unwind that subsidy in both directions.
+  </div>
+</section>
+
+<!-- 4. SCATTER -->
+<section id="scatter">
+  <h2><span class="num">4</span>Cost vs. SWE-bench performance</h2>
+  <p class="section-lede">
+    The headline trade-off: how much does each model cost <em>per chat</em>, and how does that
+    map to its <strong>SWE-bench bash-only resolve rate</strong> (the apples-to-apples LM benchmark)?
+    Toggle between PRU pricing and token pricing to watch the frontier reshuffle.
+  </p>
+  <div class="chart-card">
+    <div class="chart-controls">
+      <div class="toggle-group" role="tablist" id="scatter-toggle">
+        <button class="active" data-mode="pru">PRU pricing (today)</button>
+        <button data-mode="token">Token pricing (hypothetical)</button>
+      </div>
+    </div>
+    <div class="chart-title">SWE-bench resolve rate vs. cost per typical chat</div>
+    <div class="chart-sub">Up-and-to-the-left is best (high accuracy, low cost). Bubble color = provider.</div>
+    <div id="chart-scatter"></div>
+    <div class="legend" id="legend-scatter"></div>
+  </div>
+</section>
+
+<!-- 5. CALCULATOR -->
+<section id="calculator">
+  <h2><span class="num">5</span>Run your own numbers</h2>
+  <p class="section-lede">
+    Pick a model, a typical chat size, and a monthly volume. The chart compares your bill
+    under PRU billing (with the $0.04 overage rate) versus token billing at provider list price.
+  </p>
+  <div class="calc-grid">
+    <div class="calc-controls">
+      <div class="field">
+        <label for="calc-model">Model</label>
+        <select id="calc-model"></select>
+      </div>
+      <div class="field">
+        <label>Chats per month <span style="text-transform:none;color:var(--fg-subtle);font-weight:400">(<span id="calc-chats-val">200</span>)</span></label>
+        <input type="range" id="calc-chats" min="10" max="2000" step="10" value="200">
+        <div class="range-row"><span style="color:var(--fg-subtle);font-size:11px">10</span><span style="color:var(--fg-subtle);font-size:11px">2,000</span></div>
+      </div>
+      <div class="field">
+        <label>Avg input tokens per chat <span style="text-transform:none;color:var(--fg-subtle);font-weight:400">(<span id="calc-in-val">4,000</span>)</span></label>
+        <input type="range" id="calc-in" min="500" max="50000" step="500" value="4000">
+      </div>
+      <div class="field">
+        <label>Avg output tokens per chat <span style="text-transform:none;color:var(--fg-subtle);font-weight:400">(<span id="calc-out-val">2,000</span>)</span></label>
+        <input type="range" id="calc-out" min="200" max="20000" step="200" value="2000">
+      </div>
+    </div>
+    <div class="calc-output">
+      <div class="calc-summary">
+        <div class="pill"><div class="k">PRU monthly</div><div class="v" id="calc-pru">$0</div></div>
+        <div class="pill"><div class="k">Token monthly</div><div class="v" id="calc-tok">$0</div></div>
+        <div class="pill" id="calc-delta-pill"><div class="k">Delta (PRU − Tokens)</div><div class="v" id="calc-delta">$0</div></div>
+      </div>
+      <div id="chart-calc"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. PERSONAS -->
+<section id="personas">
+  <h2><span class="num">6</span>Who wins, who loses</h2>
+  <p class="section-lede">
+    Mapping the seven personas from the source analysis onto the math: a casual user barely
+    notices, a power user saves tens of dollars a month, and an agent-heavy team gets a
+    nasty surprise.
+  </p>
+  <div class="persona-grid" id="persona-cards"></div>
+</section>
+
+<!-- 7. VERDICT -->
+<section id="verdict">
+  <h2><span class="num">7</span>The verdict</h2>
+  <p class="section-lede">
+    The PRU model is a deliberate cross-subsidy: ultra-premium overcharges fund the
+    zero-cost included tier. Switching to tokens would be a transfer of value from
+    casual users to power users, and from chat-style users to anyone aggressively caching
+    long system prompts.
+  </p>
+  <div class="takeaway-list">
+    <div class="takeaway win">
+      <h4>✅ Stop rationing Opus</h4>
+      <p>Under tokens, Opus 4.6 / 4.7 drops to ~$0.07/chat — <em>cheaper per SWE-bench point</em> than every model except budget-tier.</p>
+    </div>
+    <div class="takeaway win">
+      <h4>✅ Gemini 3.1 Pro becomes the default</h4>
+      <p>$0.032/chat undercuts Sonnet's $0.042 with similar SWE-bench scores. The new mid-tier sweet spot.</p>
+    </div>
+    <div class="takeaway lose">
+      <h4>⚠️ Free tier disappears</h4>
+      <p>GPT-5 mini, GPT-4.1, GPT-4o all start metering at $0.005–$0.030/chat. The biggest casual-user shock.</p>
+    </div>
+    <div class="takeaway lose">
+      <h4>⚠️ Agentic workflows get expensive</h4>
+      <p>PRU's "tool calls don't count" rule disappears. A 50K-token agent run on Opus 4.7 = $0.65; same run on Haiku = $0.13.</p>
+    </div>
+    <div class="takeaway warn">
+      <h4>🏷️ GPT-5.5 loses its rationale</h4>
+      <p>12.5% more expensive than Opus 4.7 token-for-token, with weaker SWE-bench evidence. Tied at 7.5× under PRU; strictly worse under tokens.</p>
+    </div>
+    <div class="takeaway">
+      <h4>💾 Caching becomes the new lever</h4>
+      <p>Anthropic / Gemini cached-input is 90% off. A stable 10K-token system prompt becomes effectively free. PRU never rewarded this.</p>
+    </div>
+  </div>
+
+  <div class="callout success" style="margin-top:32px;">
+    <strong>Bottom line.</strong> The PRU system is likely a deliberate strategic choice — subsidize
+    the premium tier from ultra-premium overcharges while keeping the base experience
+    free to maximize adoption. A token switch would benefit power users dramatically but
+    would remove the zero-cost on-ramp that makes Copilot's baseline so attractive.
+  </div>
+</section>
+
+<footer>
+  <div>Built with <a href="https://d3js.org">D3.js</a> · Styled with <a href="https://primer.style">GitHub Primer</a> tokens</div>
+  <div class="links">
+    <a href="https://github.com/Bens-Scratch-Org/Supreme-Model-Picker/blob/main/analysis/model-comparison.md">Source analysis</a> ·
+    <a href="https://www.swebench.com/">SWE-bench</a> ·
+    <a href="https://docs.github.com/en/copilot/concepts/billing/copilot-requests">Copilot billing docs</a> ·
+    <a href="https://docs.github.com/en/billing/reference/costs-for-github-models">GitHub Models pricing</a>
+  </div>
+</footer>
+
+<div class="d3-tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
