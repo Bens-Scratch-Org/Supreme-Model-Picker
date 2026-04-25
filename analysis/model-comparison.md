@@ -1,8 +1,8 @@
-# AI Model Analysis: SWE-bench & Scale Labs Benchmarks
+# AI Model Analysis: SWE-bench, Scale Labs & GitHub Copilot Cost Analysis
 
 > **Last updated:** April 2026
 >
-> A comprehensive analysis of frontier AI models across software engineering, coding, and general capability benchmarks sourced from [SWE-bench](https://www.swebench.com/) and [Scale Labs](https://labs.scale.com/).
+> A comprehensive analysis of frontier AI models across software engineering, coding, and general capability benchmarks sourced from [SWE-bench](https://www.swebench.com/) and [Scale Labs](https://labs.scale.com/), combined with a cost/performance analysis using [GitHub Copilot](https://docs.github.com/en/copilot/concepts/billing/copilot-requests) and [GitHub Models](https://docs.github.com/en/billing/reference/costs-for-github-models) pricing.
 
 ---
 
@@ -19,6 +19,13 @@
   - [Scale Labs Showdown — Human Preference](#scale-labs-showdown--human-preference)
 - [Comprehensive Model Comparison Table](#comprehensive-model-comparison-table)
 - [Model Profiles: Strengths & Weaknesses](#model-profiles-strengths--weaknesses)
+- [GitHub Copilot Cost & Multiplier Analysis](#github-copilot-cost--multiplier-analysis)
+  - [Copilot Plan Overview](#copilot-plan-overview)
+  - [Copilot Premium Request Multipliers](#copilot-premium-request-multipliers)
+  - [GitHub Models Direct API Pricing](#github-models-direct-api-pricing)
+  - [Cost-per-Performance Analysis](#cost-per-performance-analysis)
+  - [Effective Monthly Budget Scenarios](#effective-monthly-budget-scenarios)
+  - [Cost Optimization Strategies](#cost-optimization-strategies)
 - [Best-Suited Use Cases](#best-suited-use-cases)
 - [Key Takeaways](#key-takeaways)
 - [Methodology Notes](#methodology-notes)
@@ -268,6 +275,176 @@ The table below synthesizes performance across all available benchmarks. Scores 
 
 ---
 
+## GitHub Copilot Cost & Multiplier Analysis
+
+### Copilot Plan Overview
+
+GitHub Copilot offers tiered plans with different premium request allowances. On paid plans, the **included models** (GPT-5 mini, GPT-4.1, GPT-4o) consume **zero** premium requests — you can use them unlimitedly (subject to rate limits). All other models consume premium requests according to their multiplier.
+
+| Plan | Price | Premium Requests/Month | Additional Requests | Included Models |
+|------|-------|----------------------|--------------------|--------------------|
+| **Copilot Free** | $0 | 50 | Not available | GPT-5 mini, GPT-4.1, GPT-4o (1x each) |
+| **Copilot Student** | Free | 300 | $0.04/request | GPT-5 mini, GPT-4.1, GPT-4o (0x) |
+| **Copilot Pro** | $10/mo | 300 | $0.04/request | GPT-5 mini, GPT-4.1, GPT-4o (0x) |
+| **Copilot Pro+** | $39/mo | 1,500 | $0.04/request | GPT-5 mini, GPT-4.1, GPT-4o (0x) |
+| **Copilot Business** | $19/seat/mo | 300/user | $0.04/request | GPT-5 mini, GPT-4.1, GPT-4o (0x) |
+| **Copilot Enterprise** | $39/seat/mo | 1,000/user | $0.04/request | GPT-5 mini, GPT-4.1, GPT-4o (0x) |
+
+> **Key concept:** On Copilot Free, every model costs 1 premium request per interaction. On paid plans, included models are free, and premium models deduct from your allowance based on their multiplier. Additional premium requests beyond your allowance cost **$0.04 each**.
+
+### Copilot Premium Request Multipliers
+
+Each premium model in Copilot has a multiplier that determines how many premium requests each interaction consumes. For example, a model with a 1.25x multiplier consumes 1.25 premium requests per prompt.
+
+> **Auto model selection discount:** Using Auto model selection in VS Code gives a 10% multiplier discount (e.g., a 1x model becomes 0.9x). Not available on Copilot Free.
+
+| Model | Provider | Multiplier (Paid Plans) | Multiplier (Free) | Category |
+|-------|----------|:-----------------------:|:------------------:|----------|
+| **GPT-5 mini** | OpenAI | **0x** (included) | 1x | Included |
+| **GPT-4.1** | OpenAI | **0x** (included) | 1x | Included |
+| **GPT-4o** | OpenAI | **0x** (included) | 1x | Included |
+| GPT-5.4 mini | OpenAI | **0.25x** | 1x | Budget Premium |
+| Claude Haiku 4.5 | Anthropic | **0.25x** | 1x | Budget Premium |
+| Grok Code Fast 1 | xAI | **0.25x** | — | Budget Premium |
+| Raptor mini | Microsoft | **0.25x** | — | Budget Premium |
+| GPT-5.2 | OpenAI | **1x** | 1x | Standard Premium |
+| GPT-5.3-Codex | OpenAI | **1x** | — | Standard Premium |
+| GPT-5.2-Codex | OpenAI | **1x** | — | Standard Premium |
+| Claude Sonnet 4 | Anthropic | **1x** | 1x | Standard Premium |
+| Claude Sonnet 4.5 | Anthropic | **1x** | 1x | Standard Premium |
+| Claude Sonnet 4.6 | Anthropic | **1x** ¹ | 1x | Standard Premium |
+| Gemini 2.5 Pro | Google | **1x** | — | Standard Premium |
+| Gemini 3.1 Pro | Google | **1x** | — | Standard Premium |
+| GPT-5.4 | OpenAI | **1.25x** | — | High Premium |
+| Claude Opus 4.5 | Anthropic | **1.25x** | — | High Premium |
+| Claude Opus 4.6 | Anthropic | **1.25x** | — | High Premium |
+| Claude Opus 4.7 | Anthropic | **7.5x** ² | — | Ultra Premium |
+| GPT-5.5 | OpenAI | **7.5x** ² | — | Ultra Premium |
+
+> ¹ Subject to change. ² Promotional multiplier — Claude Opus 4.7 promotional rate valid until April 30, 2026.
+
+### GitHub Models Direct API Pricing
+
+For direct API usage via [GitHub Models](https://docs.github.com/en/billing/reference/costs-for-github-models) (outside Copilot), pricing is token-based at a unified rate of **$0.00001 per token unit**, with model-specific multipliers:
+
+| Model | Input Multiplier | Output Multiplier | Input Price (per 1M tokens) | Output Price (per 1M tokens) |
+|-------|:----------------:|:-----------------:|:---------------------------:|:----------------------------:|
+| OpenAI GPT-4o | 0.25 | 1.0 | $2.50 | $10.00 |
+| OpenAI GPT-4o mini | 0.015 | 0.06 | $0.15 | $0.60 |
+| OpenAI GPT-4.1-mini | 0.04 | 0.16 | $0.40 | $1.60 |
+| OpenAI GPT-4.1 | 0.2 | 0.8 | $2.00 | $8.00 |
+| DeepSeek-R1 | 0.135 | 0.54 | $1.35 | $5.40 |
+| DeepSeek-R1-0528 | 0.135 | 0.54 | $1.35 | $5.40 |
+| DeepSeek-V3-0324 | 0.114 | 0.456 | $1.14 | $4.56 |
+| Grok 3 | 0.3 | 1.5 | $3.00 | $15.00 |
+| Grok 3 Mini | 0.025 | 0.127 | $0.25 | $1.27 |
+| Llama 4 Maverick 17B | 0.025 | 0.1 | $0.25 | $1.00 |
+| Llama-3.3-70B-Instruct | 0.071 | 0.071 | $0.71 | $0.71 |
+| Phi-4 | 0.0125 | 0.05 | $0.13 | $0.50 |
+| Phi-4-mini-instruct | 0.0075 | 0.03 | $0.08 | $0.30 |
+
+### Cost-per-Performance Analysis
+
+This is the core analysis: mapping **Copilot premium request cost** against **SWE-bench coding performance** to find the best value models.
+
+#### Cost to solve one SWE-bench issue (estimated)
+
+Using the $0.04/premium-request overage rate and SWE-bench bash-only scores, we can estimate the relative cost-efficiency of each model available in Copilot:
+
+| Model | SWE-bench Bash-Only | Copilot Multiplier | Premium Requests per Chat | Cost per Request ($0.04) | Relative Value Score ³ |
+|-------|:-------------------:|:------------------:|:------------------------:|:------------------------:|:----------------------:|
+| GPT-5 mini | 56.2% | **0x** (free) | 0 | **$0.00** | ∞ (free) |
+| GPT-4.1 | — | **0x** (free) | 0 | **$0.00** | ∞ (free) |
+| GPT-4o | — | **0x** (free) | 0 | **$0.00** | ∞ (free) |
+| Claude Haiku 4.5 | 66.6% | 0.25x | 0.25 | **$0.01** | ⭐⭐⭐⭐⭐ |
+| GPT-5.2 | 72.8% | 1x | 1 | **$0.04** | ⭐⭐⭐⭐ |
+| Claude Sonnet 4.5 | 71.4% | 1x | 1 | **$0.04** | ⭐⭐⭐⭐ |
+| Claude Sonnet 4.6 | — ⁴ | 1x | 1 | **$0.04** | ⭐⭐⭐⭐ |
+| GPT-5.3-Codex | — ⁴ | 1x | 1 | **$0.04** | ⭐⭐⭐⭐ |
+| GPT-5.2-Codex | 72.8% | 1x | 1 | **$0.04** | ⭐⭐⭐⭐ |
+| Gemini 3.1 Pro | ~74.2% ⁵ | 1x | 1 | **$0.04** | ⭐⭐⭐⭐⭐ |
+| GPT-5.4 | — ⁴ | 1.25x | 1.25 | **$0.05** | ⭐⭐⭐ |
+| Claude Opus 4.5 | 76.8% | 1.25x | 1.25 | **$0.05** | ⭐⭐⭐⭐ |
+| Claude Opus 4.6 | 75.6% | 1.25x | 1.25 | **$0.05** | ⭐⭐⭐⭐ |
+| Claude Opus 4.7 | — ⁴ | 7.5x | 7.5 | **$0.30** | ⭐⭐ |
+| GPT-5.5 | — ⁴ | 7.5x | 7.5 | **$0.30** | ⭐ |
+
+> ³ Value Score = Performance ÷ Cost. Higher stars = better value.
+> ⁴ No SWE-bench bash-only score available; ranking inferred from family.
+> ⁵ Gemini 3 Pro Preview score used as proxy.
+
+#### Key cost/performance insights
+
+```
+Performance per Dollar (SWE-bench % per $0.01 of premium request cost)
+
+Claude Haiku 4.5   ████████████████████████████████████████  66.6% @ $0.01  = 6,660%/$
+Gemini 3.1 Pro     ██████████████████                        ~74% @ $0.04   = 1,850%/$
+GPT-5.2-Codex      █████████████████                         72.8% @ $0.04  = 1,820%/$
+Claude Sonnet 4.5  ████████████████                          71.4% @ $0.04  = 1,785%/$
+GPT-5.2            █████████████████                         72.8% @ $0.04  = 1,820%/$
+Claude Opus 4.5    ██████████████                            76.8% @ $0.05  = 1,536%/$
+Claude Opus 4.6    █████████████                             75.6% @ $0.05  = 1,512%/$
+Claude Opus 4.7    ████                                      ~78% @ $0.30   =   260%/$
+GPT-5.5            ███                                       ~75% @ $0.30   =   250%/$
+GPT-5 mini         ∞ (free on paid plans)                    56.2% @ $0.00
+```
+
+### Effective Monthly Budget Scenarios
+
+How many premium-model interactions can you get per month on each plan?
+
+| Plan | Monthly Budget | Included Requests | Using 1x Models | Using 1.25x Models | Using 7.5x Models |
+|------|---------------|:-----------------:|:----------------:|:-------------------:|:------------------:|
+| **Copilot Pro** | $10/mo + 300 PR | 300 | **300 chats** | **240 chats** | **40 chats** |
+| **Copilot Pro+** | $39/mo + 1,500 PR | 1,500 | **1,500 chats** | **1,200 chats** | **200 chats** |
+| **Business** | $19/seat + 300 PR | 300/user | **300 chats** | **240 chats** | **40 chats** |
+| **Enterprise** | $39/seat + 1,000 PR | 1,000/user | **1,000 chats** | **800 chats** | **133 chats** |
+
+**If you go over your allowance** (at $0.04/premium request):
+
+| Monthly Overage Budget | 1x Model Chats | 1.25x Model Chats | 7.5x Model Chats |
+|:----------------------:|:--------------:|:------------------:|:-----------------:|
+| $10 extra | 250 | 200 | 33 |
+| $25 extra | 625 | 500 | 83 |
+| $50 extra | 1,250 | 1,000 | 167 |
+| $100 extra | 2,500 | 2,000 | 333 |
+
+### Cost Optimization Strategies
+
+Based on this analysis, here are the optimal model selection strategies:
+
+#### 1. **Best free value — GPT-5 mini (0x)**
+GPT-5 mini at 56.2% SWE-bench is surprisingly capable and costs nothing on paid plans. For routine coding tasks, boilerplate, and quick questions, this should be your default.
+
+#### 2. **Best budget premium — Claude Haiku 4.5 (0.25x)**
+At just 0.25 premium requests per chat, Haiku 4.5 delivers 66.6% SWE-bench performance — that's 4x the interactions of a 1x model from the same allowance. The best bang-for-buck premium model by far.
+
+#### 3. **Best standard premium — Gemini 3.1 Pro or GPT-5.2-Codex (1x)**
+At 1 premium request per chat, these models deliver 72-74% SWE-bench performance. GPT-5.2-Codex is purpose-built for coding; Gemini 3.1 Pro excels in multilingual codebases.
+
+#### 4. **Best high-end value — Claude Opus 4.5/4.6 (1.25x)**
+Only 25% more expensive than 1x models, but Claude Opus 4.5 scores 76.8% — the highest bash-only score available. The premium-to-performance ratio is excellent.
+
+#### 5. **Use ultra-premium sparingly — Claude Opus 4.7 / GPT-5.5 (7.5x)**
+At 7.5x, each interaction costs as much as 7-8 standard premium chats. Reserve these for critical, complex reasoning tasks where the marginal improvement justifies the 6x cost increase over Opus 4.5/4.6.
+
+#### 6. **Use Auto model selection for 10% savings**
+Auto mode provides a 10% multiplier discount (e.g., 1x → 0.9x), letting Copilot pick the best available model while saving premium requests.
+
+#### Strategy Summary
+
+| Task Type | Recommended Model | Multiplier | Why |
+|-----------|-------------------|:----------:|-----|
+| Quick questions, boilerplate | GPT-5 mini | 0x | Free on paid plans |
+| Small edits, lightweight code | Claude Haiku 4.5 | 0.25x | 4x the chats vs 1x models |
+| General coding, debugging | GPT-5.2-Codex / Sonnet 4.5 | 1x | Best quality at standard price |
+| Multilingual codebases | Gemini 3.1 Pro | 1x | Multilingual leader |
+| Complex SWE, deep debugging | Claude Opus 4.5 or 4.6 | 1.25x | Top SWE-bench at modest premium |
+| Critical reasoning, architecture | Claude Opus 4.7 / GPT-5.5 | 7.5x | Only when nothing else will do |
+
+---
+
 ## Best-Suited Use Cases
 
 | Use Case | Recommended Model | Why |
@@ -301,11 +478,15 @@ The table below synthesizes performance across all available benchmarks. Scores 
 
 7. **Multimodal SWE remains hard.** Even the best systems solve only ~36% of visual software issues — a clear area for future improvement.
 
-8. **Smaller models are approaching viability.** Claude 4.5 Haiku at 66.6% and Devstral Small at 56.4% show that efficient models can handle many coding tasks.
+8. **Claude Haiku 4.5 is the Copilot cost king.** At 0.25x multiplier with 66.6% SWE-bench performance, it delivers 4x the interactions of 1x models — the best cost/performance ratio of any premium model in Copilot.
 
-9. **Open-weight models are competitive but trail.** DeepSeek V3.2 (70%) and GLM-5 (72.8%) are within striking distance of proprietary leaders, making self-hosted coding assistants increasingly practical.
+9. **Claude Opus 4.5/4.6 at 1.25x is the sweet spot.** Just 25% more than standard premium models, but delivering the highest SWE-bench scores (75-77%). The 7.5x ultra-premium models (Opus 4.7, GPT-5.5) cost 6x more for marginal gains.
 
-10. **The benchmark landscape is fragmenting.** SWE-bench and Scale Labs measure very different things — autonomous bug fixing vs. human preference — and top models differ across these axes. Choose your benchmark based on your use case.
+10. **GPT-5 mini is free and viable.** At 56.2% SWE-bench and 0x multiplier on paid Copilot plans, it can handle the majority of routine coding tasks at zero premium cost.
+
+11. **Open-weight models are competitive but trail.** DeepSeek V3.2 (70%) and GLM-5 (72.8%) are within striking distance of proprietary leaders, making self-hosted coding assistants increasingly practical.
+
+12. **The benchmark landscape is fragmenting.** SWE-bench and Scale Labs measure very different things — autonomous bug fixing vs. human preference — and top models differ across these axes. Choose your benchmark based on your use case.
 
 ---
 
@@ -328,6 +509,12 @@ The table below synthesizes performance across all available benchmarks. Scores 
 - **Scale Labs:** [labs.scale.com](https://labs.scale.com/)
 - **Scale Labs Showdown:** [labs.scale.com/showdown](https://labs.scale.com/showdown)
 - **Scale Labs Leaderboards:** [labs.scale.com/leaderboard](https://labs.scale.com/leaderboard)
+- **GitHub Copilot Billing — Premium Requests:** [docs.github.com](https://docs.github.com/en/copilot/concepts/billing/copilot-requests)
+- **GitHub Copilot Plans:** [docs.github.com](https://docs.github.com/en/copilot/about-github-copilot/plans-for-github-copilot)
+- **GitHub Models Multipliers & Costs:** [docs.github.com](https://docs.github.com/en/billing/reference/costs-for-github-models)
+- **GitHub Models Billing:** [docs.github.com](https://docs.github.com/en/billing/concepts/product-billing/github-models)
+- **Copilot Supported Models & Multipliers:** [docs.github.com](https://docs.github.com/en/copilot/reference/ai-models/supported-models)
+- **Copilot Auto Model Selection:** [docs.github.com](https://docs.github.com/en/copilot/concepts/auto-model-selection)
 - **mini-SWE-agent:** [github.com/SWE-agent/mini-swe-agent](https://github.com/SWE-agent/mini-swe-agent)
 
 ---
