@@ -32,6 +32,8 @@
   - [Cost-per-Performance Analysis](#cost-per-performance-analysis)
   - [Effective Monthly Budget Scenarios](#effective-monthly-budget-scenarios)
   - [Cost Optimization Strategies](#cost-optimization-strategies)
+  - [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario)
+  - [Recommendations Under a Token-Based Copilot](#recommendations-under-a-token-based-copilot)
 - [Best-Suited Use Cases](#best-suited-use-cases)
 - [Key Takeaways](#key-takeaways)
 - [Methodology Notes](#methodology-notes)
@@ -102,38 +104,44 @@ These results combine **any agent scaffold** with a language model. Scores refle
 
 This is the **apples-to-apples** comparison: every model runs through the same minimal [mini-SWE-agent](https://github.com/SWE-agent/mini-swe-agent) scaffold — a simple ReAct loop with just a bash shell. No custom tools, no special scaffolding.
 
-| Rank | Model | % Resolved | Avg Cost/Instance |
-|------|-------|-----------|-------------------|
-| 🥇 1 | Claude 4.5 Opus (high reasoning) | **76.8%** | $0.75 |
-| 🥈 2 | Gemini 3 Flash (high reasoning) | **75.8%** | — |
-| 🥈 2 | MiniMax M2.5 (high reasoning) | **75.8%** | — |
-| 4 | Claude Opus 4.6 | **75.6%** | — |
-| 5 | Claude 4.5 Opus medium | **74.4%** | — |
-| 6 | Gemini 3 Pro Preview | **74.2%** | — |
-| 7 | GPT-5-2 Codex | **72.8%** | — |
-| 7 | GLM-5 (high reasoning) | **72.8%** | — |
-| 7 | GPT-5-2 (high reasoning) | **72.8%** | — |
-| 10 | GPT-5.2 (high reasoning, Dec 2025) | **71.8%** | — |
-| 11 | Claude 4.5 Sonnet (high reasoning) | **71.4%** | — |
-| 12 | Kimi K2.5 (high reasoning) | **70.8%** | — |
-| 13 | Claude 4.5 Sonnet | **70.6%** | — |
-| 14 | DeepSeek V3.2 (high reasoning) | **70.0%** | — |
-| 15 | Gemini 3 Pro | **69.6%** | — |
-| 16 | GPT-5.2 | **69.0%** | — |
-| 17 | Claude 4 Opus | **67.6%** | — |
-| 18 | Claude 4.5 Haiku (high reasoning) | **66.6%** | — |
-| 19 | GPT-5.1-codex (medium reasoning) | **66.0%** | — |
-| 19 | GPT-5.1 (medium reasoning) | **66.0%** | — |
-| 21 | GPT-5 (medium reasoning) | **65.0%** | — |
-| 22 | Claude 4 Sonnet | **64.9%** | — |
-| 23 | Kimi K2 Thinking | **63.4%** | — |
-| 24 | Minimax M2 | **61.0%** | — |
-| 25 | DeepSeek V3.2 Reasoner | **60.0%** | — |
-| 26 | GPT-5 mini (medium reasoning) | **59.8%** | — |
-| 27 | o3 | **58.4%** | — |
-| 28 | Devstral small (2512) | **56.4%** | — |
-| 29 | GPT-5 Mini | **56.2%** | — |
-| 30 | Qwen3-Coder 480B/A35B Instruct | **55.4%** | — |
+Per-instance cost figures below are taken directly from the leaderboard's reported total run cost divided by 500 instances. They reflect provider list pricing at the time of the run, not Copilot multipliers.
+
+| Rank | Model | % Resolved | Avg Cost/Instance | Cost-Efficiency (% per $) |
+|------|-------|-----------|:-----------------:|:-------------------------:|
+| 🥇 1 | Claude 4.5 Opus (high reasoning) | **76.8%** | $0.754 | 102 |
+| 🥈 2 | Gemini 3 Flash (high reasoning) | **75.8%** | $0.356 | 213 |
+| 🥈 2 | MiniMax M2.5 (high reasoning) | **75.8%** | **$0.073** | **1,034** ⭐ |
+| 4 | Claude Opus 4.6 | **75.6%** | $0.552 | 137 |
+| 5 | Claude 4.5 Opus medium | **74.4%** | $0.721 | 103 |
+| 6 | Gemini 3 Pro Preview | **74.2%** | $0.460 | 161 |
+| 7 | GPT-5-2 Codex | **72.8%** | $0.449 | 162 |
+| 7 | GLM-5 (high reasoning) | **72.8%** | $0.534 | 136 |
+| 7 | GPT-5-2 (high reasoning) | **72.8%** | $0.474 | 154 |
+| 10 | GPT-5.2 (high reasoning, Dec 2025) | **71.8%** | $0.520 | 138 |
+| 11 | Claude 4.5 Sonnet (high reasoning) | **71.4%** | $0.658 | 109 |
+| 12 | Kimi K2.5 (high reasoning) | **70.8%** | $0.147 | **482** ⭐ |
+| 13 | Claude 4.5 Sonnet | **70.6%** | $0.558 | 126 |
+| 14 | DeepSeek V3.2 (high reasoning) | **70.0%** | $0.448 | 156 |
+| 15 | Gemini 3 Pro | **69.6%** | $0.960 | 73 |
+| 16 | GPT-5.2 | **69.0%** | $0.270 | 256 |
+| 17 | Claude 4 Opus | **67.6%** | $1.131 | 60 |
+| 18 | Claude 4.5 Haiku (high reasoning) | **66.6%** | $0.331 | 201 |
+| 19 | GPT-5.1-codex (medium reasoning) | **66.0%** | $0.589 | 112 |
+| 19 | GPT-5.1 (medium reasoning) | **66.0%** | $0.306 | 216 |
+| 21 | GPT-5 (medium reasoning) | **65.0%** | $0.280 | 232 |
+| 22 | Claude 4 Sonnet | **64.9%** | $0.372 | 175 |
+| 23 | Kimi K2 Thinking | **63.4%** | $0.438 | 145 |
+| 24 | Minimax M2 | **61.0%** | $0.428 | 142 |
+| 25 | DeepSeek V3.2 Reasoner | **60.0%** | **$0.028** | **2,137** ⭐ |
+| 26 | GPT-5 mini (medium reasoning) | **59.8%** | $0.035 | **1,685** ⭐ |
+| 27 | o3 | **58.4%** | $0.334 | 175 |
+| 28 | Devstral small (2512) | **56.4%** | n/a ¹ | — |
+| 29 | GPT-5 Mini | **56.2%** | $0.047 | **1,191** ⭐ |
+| 30 | Qwen3-Coder 480B/A35B Instruct | **55.4%** | $0.248 | 223 |
+
+> ¹ Devstral run used a free local/self-hosted endpoint; per-instance dollar cost is therefore not reported on the leaderboard.
+>
+> **Cost-efficiency winners** (% Resolved per $1 spent): DeepSeek V3.2 Reasoner, GPT-5 mini, GPT-5 Mini, MiniMax M2.5, and Kimi K2.5 deliver dramatically more solve-rate per dollar than the top-of-leaderboard Claude/Gemini Pro models. **MiniMax M2.5 is the standout**: it ties Gemini 3 Flash for #2 raw performance at roughly **5x lower cost** ($0.073 vs $0.356 per instance) and only 1.0pp behind the #1 Claude 4.5 Opus run that costs **10x more**. **Gemini 3 Pro is the worst value in the top tier** at $0.96/instance for 69.6% — more expensive than Claude 4.5 Opus while solving 7.2pp fewer instances.
 
 ### SWE-bench Multilingual
 
@@ -161,8 +169,8 @@ Issues containing visual elements — 517 instances.
 
 | Rank | System | % Resolved |
 |------|--------|-----------|
-| 🥇 1 | GUIRepair + o3 | **35.98%** |
-| 🥇 1 | Codefuse_Pycfuse_SVR | **35.98%** |
+| 🥇 1 | GUIRepair + o3 | **35.98%** ¹ |
+| 🥇 1 | Codefuse_Pycfuse_SVR | **35.98%** ² |
 | 🥉 3 | Refact.ai Agent | **35.59%** |
 | 4 | OpenHands-Versa (Claude-Sonnet 4) | **34.43%** |
 | 5 | GUIRepair + o4-mini | **33.85%** |
@@ -171,6 +179,8 @@ Issues containing visual elements — 517 instances.
 | 8 | Zencoder | **30.56%** |
 | 9 | GUIRepair + GPT 4o | **30.37%** |
 | 10 | Globant Code Fixer Agent | **29.59%** |
+
+> ¹ GUIRepair + o3 result dated July 2025. ² Codefuse_Pycfuse_SVR result dated November 2025 — the most recent submission at the joint #1 score.
 
 ### Scale Labs Showdown — Human Preference
 
@@ -467,9 +477,13 @@ This is what each model actually costs at the provider level:
 |-------|----------|:------------:|:-------------:|:-------------------:|
 | **GPT-5.5** | OpenAI | $5.00 | $30.00 | $0.50 |
 | **GPT-5.4** | OpenAI | $2.50 | $15.00 | $0.25 |
-| **GPT-5.4 mini** | OpenAI | $0.75 | $4.50 | $0.07 |
-| **GPT-5.2** | OpenAI | $1.75 | $14.00 | $0.17 |
-| **GPT-5 mini** | OpenAI | $0.25 | $2.00 | $0.02 |
+| **GPT-5.4 mini** | OpenAI | $0.75 | $4.50 | $0.075 |
+| **GPT-5.3-Codex** | OpenAI | $1.75 | $14.00 | $0.175 |
+| **GPT-5.2-Codex** | OpenAI | $1.75 | $14.00 | $0.175 |
+| **GPT-5.2** | OpenAI | $1.75 | $14.00 | $0.175 |
+| **GPT-5.1** | OpenAI | $1.25 | $10.00 | $0.125 |
+| **GPT-5** | OpenAI | $1.25 | $10.00 | $0.125 |
+| **GPT-5 mini** | OpenAI | $0.25 | $2.00 | $0.025 |
 | **GPT-4.1** | OpenAI | $2.00 | $8.00 | $0.50 |
 | **GPT-4.1 mini** | OpenAI | $0.40 | $1.60 | $0.10 |
 | **GPT-4o** | OpenAI | $2.50 | $10.00 | $1.25 |
@@ -483,11 +497,11 @@ This is what each model actually costs at the provider level:
 | **Gemini 3.1 Pro** | Google | $2.00 | $12.00 | $0.20 |
 | **Gemini 3 Pro** | Google | $2.00 | $12.00 | $0.20 |
 | **Gemini 3 Flash** | Google | $0.50 | $3.00 | $0.05 |
-| **Gemini 2.5 Pro** | Google | $1.25 | $10.00 | $0.12 |
+| **Gemini 2.5 Pro** | Google | $1.25 | $10.00 | $0.125 |
 | **Gemini 2.5 Flash** | Google | $0.30 | $2.50 | $0.03 |
 | **Grok 4** | xAI | $3.00 | $15.00 | — |
 | **Grok 3** | xAI | $3.00 | $15.00 | $0.75 |
-| **Grok 3 Mini** | xAI | $0.30 | $0.50 | $0.07 |
+| **Grok 3 Mini** | xAI | $0.30 | $0.50 | $0.075 |
 
 #### Cost per Copilot Interaction: PRU vs Token-Based
 
@@ -574,6 +588,88 @@ For a developer making **200 coding interactions/month** with their primary mode
 
 **Bottom line:** The PRU model strongly favors casual-to-moderate users who stay within included models and occasionally use standard premium. Token-based pricing would dramatically benefit heavy users of ultra-premium models but would remove the zero-cost included tier that makes Copilot's baseline so attractive. The current PRU system is likely a deliberate strategic choice: subsidize the premium tier from ultra-premium overcharges while keeping the base experience free to maximize adoption.
 
+### Recommendations Under a Token-Based Copilot
+
+> **Premise:** This section answers a single question — *"If GitHub switched Copilot from PRU billing to direct token-based billing tomorrow, how should I change which models I reach for?"* All recommendations below combine the SWE-bench bash-only performance data, the leaderboard's per-instance dollar costs, and the provider list prices in the [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario) table.
+>
+> Token math throughout uses a typical Copilot chat turn of **4K input + 2K output tokens** (~$0.012 of "weight" at unit prices). Heavy agentic loops can be 10–100× larger; recommendations call this out where it matters.
+
+#### What changes about model selection
+
+Three structural shifts happen on day one of token pricing:
+
+1. **Included models stop being free.** GPT-5 mini, GPT-4.1, and GPT-4o would all start metering at provider rates ($0.005, $0.024, and $0.030 per typical chat respectively). The "default to GPT-5 mini for routine tasks" rule of thumb still wins — it's just no longer free.
+2. **Ultra-premium gets dramatically cheaper.** Claude Opus 4.7 and GPT-5.5 drop from **$0.30/chat (PRU)** to **~$0.07–0.08/chat (tokens)** — a 4× reduction. Reaching for the top-of-the-line model becomes a routine choice, not a rationed one.
+3. **Cost discrimination happens at the prompt level, not the model level.** Long context windows, large diffs, or chatty agentic workflows now drive your bill more than model choice does. A 50K-token agent run on Haiku 4.5 ($0.165/run) costs more than a tight 4K-token chat with Opus 4.7 ($0.07/run).
+
+#### Performance-per-dollar leaders under token pricing
+
+Combining SWE-bench bash-only resolve rate with the typical-chat token cost (4K in + 2K out at provider list price):
+
+| Tier | Model | SWE-bench Bash-Only | Typical Chat Cost | % Resolved per $1 |
+|------|-------|:-------------------:|:-----------------:|:-----------------:|
+| 🆓 Free-tier replacement | **GPT-5 mini** | 56.2% | $0.005 | **11,240** |
+| 💰 Best budget premium | **Claude Haiku 4.5** | 66.6% | $0.014 | 4,757 |
+| ⚖️ Best mid-tier value | **Gemini 3 Pro / 3.1 Pro** | 69.6–74.2% | $0.032 | 2,318 |
+| ⚖️ Mid-tier alternative | **GPT-5.2 / 5.2-Codex** | 69.0–72.8% | $0.035 | 2,080 |
+| 🏆 Best frontier value | **Claude Opus 4.6** | 75.6% | $0.070 | 1,080 |
+| 🏆 Frontier alternative | **Claude Opus 4.7** ¹ | ~76–78% ² | $0.070 | ~1,090 |
+| 🏆 Highest peak performance | **Claude 4.5 Opus (high reasoning)** | 76.8% | $0.070 | 1,097 |
+| ⚠️ Worst top-tier value | **GPT-5.5** | ~75% ² | $0.080 | ~940 |
+
+> ¹ Token-priced cost equals Opus 4.6 (same $5/$25 list rates). ² Estimated from family — no public bash-only score yet at the time of this writing.
+
+**Reading the table:**
+- **GPT-5 mini's lead is real** — even when no longer free, it delivers more SWE-bench % per dollar than any other model. Make it your reflex default for routine code.
+- **Gemini 3 Pro / 3.1 Pro emerges as the new mid-tier sweet spot.** Under PRU pricing it was indistinguishable from GPT-5.2 (both 1×). Under tokens, Gemini's $2/$12 rates beat OpenAI's $1.75/$14 on a typical chat **and** Gemini Flash at $0.5/$3 unlocks an even cheaper sub-tier with strong multilingual scores (72.7%).
+- **Claude Opus becomes the obvious frontier choice.** All three Opus generations price identically ($5/$25), so you should always pick the *latest* (4.7 → 4.6 → 4.5) for the same dollar. The 1.25× → 7.5× PRU jump that made 4.7 prohibitive disappears entirely.
+- **GPT-5.5 loses its rationale.** It costs **20% more** than Opus 4.7 token-for-token while landing in the same performance band. Under PRU they were tied at 7.5×; under tokens, Opus 4.7 becomes the strictly better pick for premium tasks.
+
+#### Recommendations by user persona
+
+| Persona | Today (PRU) | Token-Based World | Why It Changes |
+|---------|-------------|-------------------|----------------|
+| **Casual user** (≤50 chats/mo) | GPT-5 mini, occasional Sonnet 4.5 | GPT-5 mini for routine; Haiku 4.5 for anything non-trivial | $0.25–$0.70/month at most — pricing model barely matters |
+| **Daily developer** (200–500 chats/mo) | Sonnet 4.5/4.6 (1×), Haiku for triage | **Gemini 3.1 Pro** as default; Opus 4.6/4.7 for hard problems | Gemini 3.1 Pro at $0.032/chat undercuts Sonnet ($0.042) with similar SWE-bench scores |
+| **Power user** (1K+ chats/mo) | Mostly 1× models, sparing Opus | Opus 4.7 freely; reserve only for genuinely simple tasks | Opus 4.7 drops from $0.30 → $0.07/chat — 4× cheaper than today's PRU rate |
+| **Agentic-workflow heavy** (Copilot CLI / cloud agent users) | PRU's "tool calls don't count" rule keeps cost flat regardless of model size | **All tokens billed.** Match model to task aggressively: Haiku/Flash for traversal, Opus only for synthesis | This is where token pricing hurts — a 50K-token agent run on Opus 4.7 is $0.65; the same on Haiku 4.5 is $0.13 |
+| **Multilingual codebase team** | Sonnet 4.5 + occasional Gemini 3 Pro | **Gemini 3 Flash** as default (72.7% multilingual @ $0.50/$3); Opus 4.6 (72% multilingual) only for the hardest patches | Gemini 3 Flash leads multilingual SWE-bench at 1/4 the cost of Sonnet |
+| **Open-source-curious** | n/a — open weights aren't in Copilot | If GitHub adds them, **DeepSeek V3.2** ($1.14/$4.56) and **GLM-5** become genuine options at 70–73% SWE-bench | Token pricing makes open-weight provider economics legible — they win on $/% of any closed model except mini variants |
+| **Enterprise / data-residency** | +10% data-residency multiplier on top of PRU | Same +10% on tokens — but now also pay for cached-input on long system prompts | Watch context-caching discounts (Anthropic 90% off cached reads); a stable 10K-token system prompt cached at $0.50/MTok is virtually free |
+
+#### Recommendations by task type
+
+| Task Type | Token-Pricing Recommendation | Estimated Cost / Task | Why |
+|-----------|------------------------------|:---------------------:|-----|
+| Boilerplate, autocomplete, single-line edits | GPT-5 mini | $0.005 | 56% SWE-bench is overkill for this — anything cheaper will do |
+| Quick code Q&A, tight refactors | Claude Haiku 4.5 | $0.014 | 66.6% SWE-bench at near-mini cost; better tone/instruction-following than mini |
+| General coding, unit tests, debugging | **Gemini 3.1 Pro** *or* GPT-5.2-Codex | $0.032–0.035 | Best mid-tier balance; Codex variant for OpenAI-loyalty teams |
+| Multilingual / polyglot work | **Gemini 3 Flash** (high reasoning) | $0.008 | 72.7% multilingual #1 at 6× cheaper than Sonnet |
+| Multi-file refactors, architectural changes | **Claude Opus 4.6 or 4.7** | $0.070 | 75–77% SWE-bench, no longer rationed under tokens |
+| Hardest bugs, legacy-codebase deep-dives | Claude 4.5 Opus (high reasoning) + an agent scaffold (live-SWE-agent / Sonar) | $0.20–1.00 (varies with agent loop length) | Top-of-leaderboard performance; per-instance leaderboard cost is $0.75 |
+| Visual / multimodal issues (screenshots, mockups) | OpenHands-Versa + Claude Sonnet 4 *or* GUIRepair + o3 | $0.05–0.30 | Only systems above 30% on SWE-bench Multimodal |
+| High-volume agent loops (Copilot CLI runs) | Tier within a single task: **Haiku** for file reads/searches, **Opus** for the synthesis turn | varies | Token billing rewards routing — most tokens come from low-value traversal |
+
+#### Strategy shifts to make on day one
+
+1. **Stop treating GPT-5 mini as "free, so use it everywhere."** Pricing levels — but it's still the cheapest. Use it where 56% solve-rate is actually enough; promote everything else to Haiku 4.5.
+2. **Collapse Sonnet → Gemini 3.1 Pro for general coding.** Gemini wins on $/% under token math (76.8 cents vs 95 cents per SWE-bench point) and matches Sonnet on most real-world tasks.
+3. **Stop rationing Opus.** The PRU-era habit of "save 1.25× / 7.5× models for emergencies" is exactly wrong under tokens — Opus 4.6/4.7 is *cheaper per dollar of solve-rate* than every model except the budget tier.
+4. **Replace GPT-5.5 with Opus 4.7.** Same performance band, 12.5% lower token cost, plus stronger SWE-bench evidence.
+5. **Aggressively cache long system prompts.** Anthropic's $0.50 cached read vs $5 input (90% off) and Gemini's similar discount make stable prompts ~10× cheaper. PRU never rewarded this — token billing absolutely does.
+6. **Audit agentic workflows for token bloat.** Under PRU only the user prompt counted; under tokens, every tool call response, every file read, every reasoning trace bills. Tighten retrieval scopes, summarize long tool outputs, and consider mid-agent model downgrades.
+7. **Watch for batch-API access.** Anthropic and xAI both offer 50% off batched processing. Useful for nightly codebase analysis, bulk PR review, or test generation — none of which fit the synchronous PRU model but all of which become natural under tokens.
+
+#### When PRU is still the better deal
+
+Token pricing isn't universally better. Stay on PRU (or fight to keep it) if you are:
+
+- **A heavy free-tier user** of GPT-5 mini / GPT-4.1 / GPT-4o on a paid plan — you currently pay $0/chat. Tokens introduce $0.005–$0.030/chat overnight.
+- **A predictable-budget enterprise buyer** — finance teams forecast PRU consumption easily; per-token spend has 10–100× variance depending on context size.
+- **A user of mid-tier 1× / 1.25× models exclusively** — these are roughly token-cost-neutral, and PRU's "tool calls don't count" rule is a real subsidy for agentic workflows.
+
+For everyone outside those buckets — and especially for power users of Opus, GPT-5.5, or any agent-heavy workflow that isn't dominated by tool-call traffic — token pricing is a net win, *provided* you adjust model selection per the recommendations above.
+
 ---
 
 ## Best-Suited Use Cases
@@ -615,22 +711,27 @@ For a developer making **200 coding interactions/month** with their primary mode
 
 10. **GPT-5 mini is free and viable.** At 56.2% SWE-bench and 0x multiplier on paid Copilot plans, it can handle the majority of routine coding tasks at zero premium cost.
 
-11. **Open-weight models are competitive but trail.** DeepSeek V3.2 (70%) and GLM-5 (72.8%) are within striking distance of proprietary leaders, making self-hosted coding assistants increasingly practical.
+11. **Open-weight models are competitive but trail.** DeepSeek V3.2 (70%) and GLM-5 (72.8%) are within striking distance of proprietary leaderboards leaders, making self-hosted coding assistants increasingly practical.
 
-12. **The benchmark landscape is fragmenting.** SWE-bench and Scale Labs measure very different things — autonomous bug fixing vs. human preference — and top models differ across these axes. Choose your benchmark based on your use case.
+12. **Cost-per-instance reveals huge value gaps.** The bash-only leaderboard's per-instance cost data shows MiniMax M2.5 hits 75.8% for **$0.07/instance** — within 1pp of the #1 Claude 4.5 Opus run that costs **$0.75/instance** (10x more). Open-weight models like DeepSeek V3.2 Reasoner ($0.03) and Kimi K2.5 ($0.15) deliver 60–71% solve rates at a fraction of frontier pricing. Conversely, Gemini 3 Pro at **$0.96/instance** for only 69.6% is the worst headline value of any top-20 model.
+
+13. **The benchmark landscape is fragmenting.** SWE-bench and Scale Labs measure very different things — autonomous bug fixing vs. human preference — and top models differ across these axes. Choose your benchmark based on your use case.
 
 ---
 
 ## Methodology Notes
 
 - **SWE-bench Bash-Only** scores use [mini-SWE-agent v2.0](https://github.com/SWE-agent/mini-swe-agent) with a standardized ReAct loop and bash shell. This provides the fairest direct model comparison. Results from v1.x and v2.x may not be directly comparable due to differences in action invocation (string parsing vs. tool calling).
+- **SWE-bench Bash-Only per-instance costs** are taken from the official leaderboard's reported `cost` field (total dollars across the 500-instance evaluation) divided by 500. Rows where the model provider's run used a free/local endpoint (e.g., Devstral) report no dollar cost on the leaderboard.
 - **SWE-bench Verified** allows any agent system. Scores reflect the best system built around each model.
-- **Scale Labs Showdown** uses blind pairwise comparisons with Elo-style ratings from organic user votes across 80+ countries.
+- **Scale Labs Showdown** uses blind pairwise comparisons with Elo-style ratings from organic user votes across 80+ countries. Elo ratings shift continuously as new votes arrive — figures here are a snapshot.
 - Scores are pulled from the official leaderboard data as of **February–April 2026**.
 - Some models appear in multiple benchmarks; others are only tested in specific contexts.
 - "High reasoning" / "medium reasoning" denotes extended thinking/chain-of-thought modes enabled during inference.
 - **Copilot pricing** is based on the Premium Request Unit (PRU) model. For agentic features, only user-initiated prompts count — autonomous tool calls do not consume premium requests.
 - **Provider API pricing** was cross-referenced against Anthropic's published rates, GitHub Models docs, xAI docs, and the [LiteLLM pricing database](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json). All prices verified as of April 25, 2026.
+- **Model release dates verified via LiteLLM dated entries:** GPT-5.5 → `gpt-5.5-2026-04-23`, Claude Opus 4.7 → `claude-opus-4-7-20260416`, Claude Opus 4.6 → `claude-opus-4-6-20260205`, GPT-5.4 → `gpt-5.4-2026-03-05`, GPT-5.2 → `gpt-5.2-2025-12-11`, Claude Opus 4.5 → `claude-opus-4-5-20251101`.
+- **Validation pass (April 25, 2026):** Every SWE-bench score in this document was reconciled against [`data/leaderboards.json`](https://raw.githubusercontent.com/SWE-bench/swe-bench.github.io/master/data/leaderboards.json) on the official `swe-bench.github.io` repo. Provider list prices (Anthropic Opus 4.5/4.6/4.7, Sonnet 4/4.5/4.6, Haiku 4.5; OpenAI GPT-5/5.1/5.2/5.3-Codex/5.4/5.4-mini/5.5/4.1/4o; Google Gemini 2.5 Pro/Flash, Gemini 3 Pro/Flash, Gemini 3.1 Pro; xAI Grok 3/3-Mini/4) were re-checked against LiteLLM's dated `model_prices_and_context_window.json` entries and matched to the cent. GitHub Copilot multipliers and the 7.5x promotional notes for Opus 4.7 (until 2026-04-30) and GPT-5.5 were re-verified against `docs.github.com/en/copilot/reference/ai-models/supported-models`.
 
 ---
 
