@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copilot PRU vs Tokens · A Data Story</title>
+<meta name="description" content="An interactive D3.js walkthrough of GitHub Copilot's PRU billing, the token costs that explain it, and what would change in chat vs. agentic workflows under token-based pricing.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%231f6feb' d='M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.7 7.7 0 018 4.6c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>Copilot Pricing · A Data Story</span>
+    </div>
+    <nav class="nav-links">
+      <a href="#question">Question</a>
+      <a href="#tiers">Tiers explained</a>
+      <a href="#multipliers">Multipliers</a>
+      <a href="#subsidy">Subsidy</a>
+      <a href="#workflows">Workflows</a>
+      <a href="#scatter">Cost vs perf</a>
+      <a href="#calculator">Calculator</a>
+      <a href="#impact">Winners &amp; losers</a>
+      <a href="#verdict">Verdict</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <span class="eyebrow">A Copilot pricing thought-experiment · revised</span>
+  <h1>If GitHub dropped <span class="accent">PRU billing</span> for <span class="danger">tokens</span>, who actually wins?</h1>
+  <p class="lede">
+    Copilot meters most models in <em>premium request units</em> — fixed-price chats with
+    a per-model multiplier. Direct API providers meter in tokens. The two systems disagree
+    by an order of magnitude in opposite directions, and which way they disagree depends
+    entirely on how you use Copilot. The first version of this analysis only modeled
+    chat. The corrected version below models <strong>chat, agent mode, Copilot CLI,
+    sub-agents and the cloud agent</strong> — and the verdict reverses for most users.
+  </p>
+  <div class="hero-stats">
+    <div class="stat-card down">
+      <div class="label">Heaviest PRU markup (chat only)</div>
+      <div class="value" id="kpi-markup">—</div>
+      <div class="sub">Opus 4.7 PRU vs simple-chat tokens</div>
+    </div>
+    <div class="stat-card up">
+      <div class="label">Heaviest PRU subsidy (cloud agent)</div>
+      <div class="value" id="kpi-cloud">—</div>
+      <div class="sub">Same model, large cloud-agent task</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Workflow modes covered</div>
+      <div class="value">7</div>
+      <div class="sub">From simple chat to large cloud-agent runs</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Anthropic-published anchor</div>
+      <div class="value">15×</div>
+      <div class="sub">Multi-agent tokens vs. plain chat</div>
+    </div>
+  </div>
+</div>
+
+<!-- 1. THE QUESTION -->
+<section id="question" class="no-border">
+  <h2><span class="num">1</span>The question, revised</h2>
+  <p class="section-lede">
+    On a paid Copilot plan today, a chat with <strong>GPT-4o costs $0</strong>, a chat with
+    <strong>Claude Opus 4.7 costs $0.30</strong>, and the actual provider token cost of those
+    two conversations is roughly <strong>$0.03</strong> and <strong>$0.07</strong>. PRU and tokens disagree
+    by an order of magnitude in opposite directions. So — what would actually move if GitHub
+    flipped the switch?
+  </p>
+  <div class="callout">
+    <strong>Two-part answer.</strong>
+    <strong>For chat:</strong> ultra-premium gets ~4× cheaper, the free tier disappears,
+    and Gemini wins the mid-tier. <strong>For agentic workflows:</strong> the math reverses
+    completely — PRU's "tool calls don't count" rule is worth $300–$2,000/month for
+    agent-heavy users, and unwinding it would dwarf every other change.
+  </div>
+</section>
+
+<!-- 2. THE FIVE PRU TIERS — EXPLAINED -->
+<section id="tiers">
+  <h2><span class="num">2</span>The five PRU tiers, and the token costs that explain them</h2>
+  <p class="section-lede">
+    Copilot collapses 18 models into <strong>five pricing tiers</strong>. Each tier's
+    multiplier is a deliberate choice — sometimes a fair reflection of the model's
+    underlying token cost, sometimes a strategic subsidy or markup. Here's what each
+    tier actually buys you and why GitHub almost certainly priced it that way.
+  </p>
+  <div class="tier-grid" id="tier-grid"></div>
+  <div class="callout warn" style="margin-top:24px">
+    <strong>Read this as a system, not a list.</strong>
+    The 7.5× ultra-premium tier <em>funds</em> the 0× included tier. The 1.25× high-premium
+    tier is consistently subsidized at chat sizes <em>and</em> at agent sizes — a deliberate
+    "use Opus, don't be afraid" signal. Standard Premium (1×) is the only tier that's
+    roughly cost-neutral against tokens.
+  </div>
+</section>
+
+<!-- 3. PRU MULTIPLIERS BY MODEL -->
+<section id="multipliers">
+  <h2><span class="num">3</span>Every model placed on the multiplier ladder</h2>
+  <p class="section-lede">
+    Eighteen models, five tiers. Hover any bar to see the multiplier, the per-chat PRU
+    charge, and the underlying token cost for that model.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Copilot premium-request multiplier by model</div>
+    <div class="chart-sub">Higher = more PRU per chat. Bars colored by tier.</div>
+    <div id="chart-multipliers"></div>
+    <div class="legend" id="legend-multipliers"></div>
+    <div class="source-line">Source: <a href="https://docs.github.com/en/copilot/reference/ai-models/supported-models">docs.github.com — Copilot supported models</a></div>
+  </div>
+</section>
+
+<!-- 4. HIDDEN SUBSIDY -->
+<section id="subsidy">
+  <h2><span class="num">4</span>The hidden subsidy — and why the chat picture is wrong</h2>
+  <p class="section-lede">
+    Subtracting the actual provider-token cost of a typical chat from the PRU charge
+    reveals who is over- and under-charged.
+    <strong>The first toggle below is the original analysis (4K-in / 2K-out simple chat).</strong>
+    <strong>The second toggle re-runs the same comparison at agent-mode token volumes</strong>
+    (60K in / 15K out). Watch the ultra-premium bars flip sign.
+  </p>
+  <div class="chart-card">
+    <div class="chart-controls">
+      <div class="toggle-group" id="subsidy-toggle">
+        <button class="active" data-mode="chat">Simple chat (4K + 2K)</button>
+        <button data-mode="agent">Agent mode (60K + 15K)</button>
+      </div>
+    </div>
+    <div class="chart-title">PRU price minus actual token cost · per task</div>
+    <div class="chart-sub">Right (red) = PRU overcharges &middot; Left (green) = PRU undercharges (subsidizing the user)</div>
+    <div id="chart-subsidy"></div>
+  </div>
+  <div class="callout warn">
+    <strong>The "ultra-premium overcharges users" finding only holds for short chats.</strong>
+    The moment a user prompt triggers any kind of agentic loop — workspace context, tool
+    calls, tests, sub-agents — the high and ultra tiers flip from the red side to the
+    green side. PRU subsidizes <em>users</em> of those tiers in the modes those tiers
+    were designed for.
+  </div>
+</section>
+
+<!-- 5. WORKFLOW MODES -->
+<section id="workflows">
+  <h2><span class="num">5</span>Why "chat" is the wrong unit</h2>
+  <p class="section-lede">
+    Copilot in 2026 is not one product — it's at least <strong>seven workflow modes</strong> spanning
+    nearly three orders of magnitude in token consumption. The 4K-in / 2K-out "typical chat"
+    figure that the original PRU vs. token comparison rested on describes only the leftmost
+    column of this picture.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Token volume by workflow mode (log scale)</div>
+    <div class="chart-sub">One bar = one full task or session. The same prompt costs the same in PRU; under tokens it scales with the bar.</div>
+    <div id="chart-workflows"></div>
+    <div class="source-line">Anchored to <a href="https://www.anthropic.com/engineering/built-multi-agent-research-system">Anthropic's published 4× / 15× chat-vs-agent multipliers</a> and <a href="https://www.swebench.com/">SWE-bench bash-only $/instance measured costs</a>.</div>
+  </div>
+  <div class="workflow-table" id="workflow-table"></div>
+  <div class="callout">
+    <strong>The "tool calls don't count" rule.</strong>
+    The <a href="https://docs.github.com/en/copilot/concepts/billing/copilot-requests">Copilot billing docs</a>
+    are explicit: <em>"only the prompts you send count as premium requests; actions Copilot
+    takes autonomously to complete your task, such as tool calls, do not."</em> That single
+    sentence is the most valuable subsidy in the entire Copilot pricing system, and it
+    grows non-linearly with workflow autonomy.
+  </div>
+</section>
+
+<!-- 6. SCATTER -->
+<section id="scatter">
+  <h2><span class="num">6</span>Cost vs. SWE-bench performance</h2>
+  <p class="section-lede">
+    The headline trade-off: how much does each model cost <em>per chat</em>, and how does
+    that map to its <strong>SWE-bench bash-only resolve rate</strong>? Toggle between PRU pricing
+    and token pricing to watch the frontier reshuffle.
+  </p>
+  <div class="chart-card">
+    <div class="chart-controls">
+      <div class="toggle-group" id="scatter-toggle">
+        <button class="active" data-mode="pru">PRU pricing (today)</button>
+        <button data-mode="token">Token pricing (hypothetical)</button>
+      </div>
+    </div>
+    <div class="chart-title">SWE-bench resolve rate vs. cost per typical chat</div>
+    <div class="chart-sub">Up-and-to-the-left is best. Bubble color = provider.</div>
+    <div id="chart-scatter"></div>
+    <div class="legend" id="legend-scatter"></div>
+  </div>
+</section>
+
+<!-- 7. CALCULATOR with workflow mode -->
+<section id="calculator">
+  <h2><span class="num">7</span>Run your own numbers — with workflow mode</h2>
+  <p class="section-lede">
+    Pick a model, a workflow mode, and a monthly volume. The chart compares your bill
+    under PRU billing (where the workflow mode is irrelevant) versus token billing
+    (where it dominates).
+  </p>
+  <div class="calc-grid">
+    <div class="calc-controls">
+      <div class="field">
+        <label for="calc-model">Model</label>
+        <select id="calc-model"></select>
+      </div>
+      <div class="field">
+        <label for="calc-workflow">Workflow mode</label>
+        <select id="calc-workflow"></select>
+        <span class="hint" id="calc-workflow-hint"></span>
+      </div>
+      <div class="field">
+        <label>Tasks / chats per month <span style="text-transform:none;color:var(--fg-subtle);font-weight:400">(<span id="calc-chats-val">200</span>)</span></label>
+        <input type="range" id="calc-chats" min="1" max="2000" step="1" value="200">
+      </div>
+      <div class="field">
+        <label>Override input tokens / task <span style="text-transform:none;color:var(--fg-subtle);font-weight:400">(<span id="calc-in-val">4,000</span>)</span></label>
+        <input type="range" id="calc-in" min="500" max="2000000" step="500" value="4000">
+      </div>
+      <div class="field">
+        <label>Override output tokens / task <span style="text-transform:none;color:var(--fg-subtle);font-weight:400">(<span id="calc-out-val">2,000</span>)</span></label>
+        <input type="range" id="calc-out" min="200" max="500000" step="200" value="2000">
+      </div>
+    </div>
+    <div class="calc-output">
+      <div class="calc-summary">
+        <div class="pill"><div class="k">PRU monthly</div><div class="v" id="calc-pru">$0</div></div>
+        <div class="pill"><div class="k">Token monthly</div><div class="v" id="calc-tok">$0</div></div>
+        <div class="pill" id="calc-delta-pill"><div class="k">Delta (PRU − Tokens)</div><div class="v" id="calc-delta">$0</div></div>
+      </div>
+      <div id="chart-calc"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. WINNERS / LOSERS -->
+<section id="impact">
+  <h2><span class="num">8</span>Winners and losers under token billing</h2>
+  <p class="section-lede">
+    The corrected impact analysis. Each row models a real user profile under the <em>actual</em>
+    workflow mix that profile uses — not a chat-only assumption. Bars show the
+    monthly-cost range under token pricing (purple) versus today's PRU bill (blue).
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Monthly Copilot cost: today (PRU) vs. hypothetical (tokens) by user profile</div>
+    <div class="chart-sub">Blue bar = today's PRU charge. Purple range = token-pricing low/high estimate. Right-of-blue = the user pays more under tokens.</div>
+    <div id="chart-impact"></div>
+  </div>
+</section>
+
+<!-- 9. VERDICT -->
+<section id="verdict">
+  <h2><span class="num">9</span>The verdict, rewritten</h2>
+  <p class="section-lede">
+    The PRU model is a deliberate cross-subsidy: ultra-premium chat overcharges fund
+    the zero-cost included tier, and PRU's "tool calls don't count" rule funds every
+    agentic workflow on every tier. A token switch would unwind both subsidies — and
+    the second one is much, much larger than the first.
+  </p>
+  <div class="takeaway-list">
+    <div class="takeaway win">
+      <h4>✅ Chat-only ultra-premium users save</h4>
+      <p>Opus 4.7 / GPT-5.5 in plain chat mode drop from $0.30 to ~$0.07–0.08 per turn. A 200-prompt user saves ~$44/month.</p>
+    </div>
+    <div class="takeaway lose">
+      <h4>⚠️ The free tier disappears</h4>
+      <p>GPT-5 mini, GPT-4.1, GPT-4o all start metering at $0.005–$0.030/chat. Casual users on paid plans pay something for the first time.</p>
+    </div>
+    <div class="takeaway lose">
+      <h4>⚠️ Agent mode users lose hundreds</h4>
+      <p>One IDE agent task burns 5–10× a chat in tokens. Heavy users pay $200–600/mo extra. Sub-agent and cloud-agent users pay $400–2,500/mo extra.</p>
+    </div>
+    <div class="takeaway lose">
+      <h4>⚠️ The cloud agent becomes brutal</h4>
+      <p>One large cloud-agent task = $10+ of tokens at provider list price, vs. $0.30 in PRU. Five tasks/day on Opus = ~$1,500/month extra.</p>
+    </div>
+    <div class="takeaway warn">
+      <h4>🏷️ Cheap models burn more tokens</h4>
+      <p>Gemini 3 Flash at $0.50/MTok solves the same SWE-bench task as Opus at 2.5× the token count. Token pricing rewards iteration efficiency, not just rate.</p>
+    </div>
+    <div class="takeaway">
+      <h4>💾 Caching becomes the budget lever</h4>
+      <p>Anthropic / Gemini cached input is 90% off. A stable 10K-token system prompt becomes effectively free under tokens — PRU never rewarded this.</p>
+    </div>
+  </div>
+
+  <div class="callout success" style="margin-top:32px;">
+    <strong>Bottom line.</strong> Two subsidies hold up Copilot's pricing today.
+    The <em>ultra-premium overcharge</em> funds the free tier, and is the one the
+    original analysis surfaced. The <em>"tool calls don't count" rule</em> is the much
+    bigger subsidy — it funds every autonomous workflow on every tier, and it's invisible
+    in any per-chat comparison. Token pricing would expose both. Casual chat users would
+    notice; agent-heavy users would feel it like a tax.
+  </div>
+</section>
+
+<footer>
+  <div>Built with <a href="https://d3js.org">D3.js</a> · Styled with <a href="https://primer.style">GitHub Primer</a> tokens</div>
+  <div class="links">
+    <a href="https://github.com/Bens-Scratch-Org/Supreme-Model-Picker/blob/main/analysis/model-comparison.md">Source analysis</a> ·
+    <a href="https://www.swebench.com/">SWE-bench</a> ·
+    <a href="https://docs.github.com/en/copilot/concepts/billing/copilot-requests">Copilot billing</a> ·
+    <a href="https://www.anthropic.com/engineering/built-multi-agent-research-system">Anthropic on multi-agent tokens</a> ·
+    <a href="https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-coding-agent">Cloud agent docs</a>
+  </div>
+</footer>
+
+<div class="d3-tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
