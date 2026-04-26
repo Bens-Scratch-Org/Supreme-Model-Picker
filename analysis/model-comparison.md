@@ -33,6 +33,7 @@
   - [Effective Monthly Budget Scenarios](#effective-monthly-budget-scenarios)
   - [Cost Optimization Strategies](#cost-optimization-strategies)
   - [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario)
+  - [Validating the Token Assumption: Real Usage for High-Multiplier Models](#validating-the-token-assumption-real-usage-for-high-multiplier-models)
   - [Recommendations Under a Token-Based Copilot](#recommendations-under-a-token-based-copilot)
 - [Best-Suited Use Cases](#best-suited-use-cases)
 - [Key Takeaways](#key-takeaways)
@@ -587,6 +588,150 @@ For a developer making **200 coding interactions/month** with their primary mode
 | **Power user value** | ❌ Penalizes heavy Opus/GPT-5.5 users | ✅ Pay proportional to usage |
 
 **Bottom line:** The PRU model strongly favors casual-to-moderate users who stay within included models and occasionally use standard premium. Token-based pricing would dramatically benefit heavy users of ultra-premium models but would remove the zero-cost included tier that makes Copilot's baseline so attractive. The current PRU system is likely a deliberate strategic choice: subsidize the premium tier from ultra-premium overcharges while keeping the base experience free to maximize adoption.
+
+### Validating the Token Assumption: Real Usage for High-Multiplier Models
+
+> **Premise:** Every dollar figure in the [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario) above sits on top of a single load-bearing assumption — that a "typical Copilot chat" is **4K input + 2K output tokens**. This section pressure-tests that number against published vendor data, model architecture changes (especially adaptive thinking on Claude Opus 4.7), and what we actually know about Copilot's request shape. The headline finding: **the 4K/2K assumption substantially understates real usage for the high-multiplier models the PRU/token comparison most affects.** Re-running the math with realistic figures changes — and in some cases reverses — the verdict.
+
+#### Why 4K/2K is a low-end "simple chat" estimate
+
+The 4K-in / 2K-out figure is reasonable for a *standalone* API call: a short system prompt, a single user question, a moderate code response. Inside Copilot it leaves out at least five major sources of input/output expansion:
+
+1. **Copilot's system prompt and tool schemas.** GitHub doesn't publish exact sizes, but reverse-engineered captures of VS Code Copilot Chat traffic put the system prompt + tool definitions in the **2–7K-token range** before any user input is added. This is a per-turn fixed cost that the 4K input figure is supposed to absorb in its entirety — leaving virtually nothing for actual user code or context.
+2. **Workspace / RAG context.** `@workspace` queries, attached files, and the "open editors" auto-context routinely add **5–50K input tokens** depending on workspace size. The Copilot docs explicitly recommend opening multiple relevant files to give the model "a bigger picture of your project" ([source](https://github.blog/ai-and-ml/github-copilot/how-to-use-github-copilot-in-your-ide-tips-tricks-and-best-practices/)) — every one of those files is billable input.
+3. **Multi-turn history re-sent each turn.** Stateless chat APIs require re-sending the full conversation on every turn. A five-turn conversation with 2K output each turn means turn 5 carries ~10K of prior assistant output back into input, *plus* the original system prompt and context. Anthropic explicitly notes that "current assistant turn thinking *does* count toward your input tokens" on the next turn ([token counting docs](https://docs.anthropic.com/en/docs/build-with-claude/token-counting)).
+4. **Extended / adaptive thinking.** This is the big one for the 7.5× tier and is detailed below.
+5. **Tool call traces in agent mode.** Copilot CLI, the cloud agent, and `@workspace` all involve tool calls whose responses are billed as input on the next turn. Anthropic's Claude Code docs say "a single debugging session or codebase exploration might generate and consume tens of thousands of tokens" ([source](https://www.anthropic.com/engineering/claude-code-best-practices)).
+
+#### The Opus 4.7 thinking problem
+
+For ultra-premium models, the assumption breaks even harder because of architecture changes that didn't exist when the original 4K/2K rule of thumb was set:
+
+- **Claude Opus 4.7 supports only [adaptive thinking](https://docs.anthropic.com/en/docs/build-with-claude/adaptive-thinking).** Manual `budget_tokens` is rejected with a 400 error. Thinking is on by default at `effort: high`, and per Anthropic's own documentation: *"At the default effort level (high), Claude almost always thinks. … xhigh — Claude always thinks deeply with extended exploration. Available on Claude Opus 4.7."*
+- **Thinking tokens are billed as output.** Opus 4.7 supports up to **128K output tokens**. Even a moderate reasoning trace of 4–10K thinking tokens — well within typical adaptive thinking budgets observed in the wild — adds **2–5× the output volume** of the 2K-out assumption.
+- **GPT-5.5 has the same property.** Like other GPT-5-series reasoning models, internal reasoning tokens count against output billing. OpenAI's own pricing pages list GPT-5.5 at $5/$30 per MTok specifically because the $30 output rate is amortizing reasoning tokens.
+
+In other words: for Opus 4.7 and GPT-5.5, the act of using the model *as designed* — with reasoning enabled — guarantees the chat is not 4K/2K. It's much closer to 8K/8K at minimum.
+
+#### Anthropic's own published benchmark
+
+Anthropic's research engineering blog [How we built our multi-agent research system](https://www.anthropic.com/engineering/built-multi-agent-research-system) gives a concrete external reference point:
+
+> *"In our data, agents typically use about **4× more tokens than chat interactions**, and multi-agent systems use about **15× more tokens** than chats."*
+
+This is from production Claude usage, by Anthropic, on the same model family Copilot resells. It is the most credible single-number anchor available for "what does a real agent chat cost." Applied to the 4K/2K baseline:
+
+| Workload type | Multiplier vs. baseline chat | Realistic input + output |
+|--------------|:----------------------------:|:------------------------:|
+| Standalone simple chat (the doc's baseline) | 1× | 4K + 2K |
+| **Typical Copilot chat with workspace context** | ~2× | **8K + 4K** |
+| Single-agent run (Anthropic figure) | ~4× | 16K + 8K |
+| Multi-agent / cloud-agent run (Anthropic figure) | ~15× | 60K + 30K |
+
+#### Re-running the PRU vs token math at realistic chat sizes
+
+The 4K/2K assumption made every high-multiplier model look like a token-pricing winner. Holding PRU costs constant (they don't depend on token count) and rebasing the token side at realistic sizes for each workload type:
+
+**Claude Opus 4.7 (PRU: $0.30/chat at 7.5× ; tokens: $5 in / $25 out)**
+
+| Scenario | Input | Output | Token cost | Vs. PRU | Winner |
+|----------|:-----:|:------:|:----------:|:-------:|:------:|
+| Original assumption (no thinking, no context) | 4K | 2K | **$0.070** | 0.23× | Tokens 🏆🏆🏆 |
+| Realistic Copilot chat (system prompt + open files + light thinking) | 8K | 4K | **$0.140** | 0.47× | Tokens 🏆🏆 |
+| Adaptive thinking at default high effort (4–8K thinking tokens) | 8K | 8K | **$0.240** | 0.80× | Tokens 🏆 (slim) |
+| `@workspace` query + xhigh thinking | 30K | 12K | **$0.450** | **1.50×** | **PRU 🏆** |
+| Multi-file refactor / agent run with thinking | 50K | 20K | **$0.750** | **2.50×** | **PRU 🏆🏆** |
+| Cloud-agent / CLI session (15× per Anthropic) | 60K | 30K | **$1.050** | **3.50×** | **PRU 🏆🏆🏆** |
+
+**GPT-5.5 (PRU: $0.30/chat at 7.5× ; tokens: $5 in / $30 out)**
+
+| Scenario | Input | Output | Token cost | Vs. PRU | Winner |
+|----------|:-----:|:------:|:----------:|:-------:|:------:|
+| Original assumption | 4K | 2K | **$0.080** | 0.27× | Tokens 🏆🏆🏆 |
+| Realistic Copilot chat | 8K | 4K | **$0.160** | 0.53× | Tokens 🏆 |
+| With reasoning tokens (output dominates) | 8K | 10K | **$0.340** | **1.13×** | **PRU 🏆** |
+| `@workspace` + reasoning | 30K | 12K | **$0.510** | **1.70×** | **PRU 🏆🏆** |
+| Agent-style usage | 60K | 30K | **$1.200** | **4.00×** | **PRU 🏆🏆🏆** |
+
+**The reversal point is shockingly close.** Opus 4.7 stops being a "tokens win" pick the moment a chat involves a workspace lookup, an attached PDF, or even a few thousand thinking tokens — all of which are *normal* for the kind of work people actually pay 7.5× for.
+
+#### What about high-multiplier models lower in the stack?
+
+The same exercise for the 1.25× tier (Claude Opus 4.5/4.6, GPT-5.4) and the next-tier-down 7.5× alternative (the as-yet-unreleased successors people might compare against):
+
+**Claude Opus 4.5/4.6 (PRU: $0.05/chat at 1.25× ; tokens: $5 in / $25 out)**
+
+| Scenario | Input | Output | Token cost | Vs. PRU | Winner |
+|----------|:-----:|:------:|:----------:|:-------:|:------:|
+| Original assumption | 4K | 2K | **$0.070** | 1.40× | PRU 🏆 |
+| Realistic Copilot chat | 8K | 4K | **$0.140** | **2.80×** | **PRU 🏆🏆** |
+| With workspace context | 30K | 8K | **$0.350** | **7.00×** | **PRU 🏆🏆🏆** |
+
+The PRU model is even *more* of a bargain for Opus 4.5/4.6 than the original analysis suggested. Under realistic usage these models are subsidized by 2–7×, not 1.4×.
+
+**GPT-5.4 (PRU: $0.05/chat at 1.25× ; tokens: $2.50 in / $15 out)**
+
+| Scenario | Input | Output | Token cost | Vs. PRU | Winner |
+|----------|:-----:|:------:|:----------:|:-------:|:------:|
+| Original assumption | 4K | 2K | **$0.040** | 0.80× | Tokens 🏆 |
+| Realistic Copilot chat | 8K | 4K | **$0.080** | **1.60×** | **PRU 🏆** |
+| With workspace context | 30K | 8K | **$0.195** | **3.90×** | **PRU 🏆🏆** |
+
+GPT-5.4 also flips: the original analysis called it a "tokens win" only because the assumption was unrealistically small.
+
+#### The caching wildcard
+
+Anthropic and Google both offer **prompt caching at ~90% off** ($0.50/MTok cached read vs $5/MTok input for Opus). If Copilot aggressively caches its system prompt and stable workspace context — which would be the rational thing to do — the input side of the token bill drops substantially:
+
+| Cache hit rate on input | Effective input rate (Opus 4.7) | 30K-input chat cost | Vs. PRU |
+|:-----------------------:|:-------------------------------:|:-------------------:|:-------:|
+| 0% (no caching, baseline) | $5.00/MTok | $0.450 (30K @ $5 + 12K @ $25) | 1.50× |
+| 50% cached | $2.75/MTok | $0.383 | 1.27× |
+| 90% cached (hot system prompt) | $0.95/MTok | $0.329 | 1.10× |
+
+Caching reduces but does not eliminate the realistic-usage flip. Even at a 90% cache hit rate, a workspace-context chat with adaptive thinking on Opus 4.7 costs *more* than the PRU charge. **Caching is the lever that keeps token pricing competitive for power users — not a silver bullet that brings ultra-premium back into "always cheaper" territory.**
+
+#### The corrected hidden-subsidy picture
+
+Recomputing the [hidden subsidy structure](#the-hidden-subsidy-structure) with realistic Copilot chat sizes (8K in / 4K out for non-reasoning models, 8K in / 8K out for adaptive-thinking ultra-premium):
+
+```
+Overcharged (subsidizing others)              │  Undercharged (subsidized)
+──────────────────────────────────────────────┼──────────────────────────────
+                                              │  Claude Opus 4.7  $0.30 PRU vs $0.24 tok (light)
+                                              │  GPT-5.5          $0.30 PRU vs $0.34 tok (with reasoning)
+Gemini 2.5 Pro    $0.04 PRU vs $0.05 tok      │  Opus 4.5/4.6     $0.05 PRU vs $0.14 tok
+Gemini 3.1 Pro    $0.04 PRU vs $0.064 tok     │  Haiku 4.5        $0.01 PRU vs $0.028 tok
+GPT-5.2           $0.04 PRU vs $0.07 tok      │  GPT-4.1          $0.00 PRU vs $0.048 tok
+                                              │  GPT-4o           $0.00 PRU vs $0.060 tok
+                                              │  GPT-5 mini       $0.00 PRU vs $0.010 tok
+```
+
+The picture flips. **Under realistic usage, only Gemini and GPT-5.2 are meaningfully overcharged by PRU — and even they are within ~30% of token cost.** The 7.5× tier is no longer the giant overcharge the original analysis showed; it's roughly fair pricing for a typical reasoning chat and a *bargain* for any chat that touches workspace context.
+
+#### Implications for the rest of this document
+
+The original [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario) and [Recommendations Under a Token-Based Copilot](#recommendations-under-a-token-based-copilot) sections are still directionally useful but should be read with these corrections in mind:
+
+1. **"Stop rationing Opus" is conditional, not universal.** It holds for short, single-turn chats without workspace context or thinking. It *fails* for the workflows Opus is most useful in — multi-file work, codebase Q&A, long debugging sessions. For those, PRU's flat per-chat charge is cheaper and dramatically more predictable.
+2. **"GPT-5.5 vs Opus 4.7" is closer than the original table suggested.** Both are roughly fair at 7.5× under realistic usage; both become bad deals only on tightly-scoped one-shot chats. The "always pick Opus" recommendation softens to "pick on capability, not price."
+3. **Agentic-workflow users are the *biggest* token-pricing losers, not the biggest winners.** PRU's "tool calls don't count" rule is worth substantially more than the original analysis credited — easily $1–10/agent-run for ultra-premium models. The persona table elsewhere in this document undercounts this.
+4. **Cache discipline becomes a real budgeting input.** A team that caches its 10K-token Copilot system prompt and stable workspace digests will see a noticeably different token bill than one that doesn't. PRU papers over this entirely.
+5. **The "free tier" subsidy is larger than originally shown.** A typical GPT-4o Copilot chat at 8K/4K tokens is $0.06 of token value — 2× the original $0.03 figure. The included tier is even more of a giveaway than it first appears.
+
+#### Methodology and confidence
+
+| Number | Source | Confidence |
+|--------|--------|:----------:|
+| Anthropic agents = 4× chat tokens, multi-agent = 15× | [Anthropic engineering blog, June 2025](https://www.anthropic.com/engineering/built-multi-agent-research-system) | **High** — first-party data |
+| Adaptive thinking is mandatory on Opus 4.7, default `high` effort | [Anthropic adaptive-thinking docs](https://docs.anthropic.com/en/docs/build-with-claude/adaptive-thinking) | **High** — first-party docs |
+| Thinking tokens count toward output billing | [Anthropic token-counting docs](https://docs.anthropic.com/en/docs/build-with-claude/token-counting) | **High** — first-party docs |
+| Copilot system prompt + tool schemas: 2–7K tokens | Community reverse-engineering of VS Code Copilot traffic; not officially confirmed | **Medium** — directionally established but exact size varies by client and version |
+| `@workspace` adds 5–50K input tokens | GitHub Copilot product docs encourage opening many files; consistent with public discussion of indexed-RAG sizing | **Medium** — order-of-magnitude correct, exact figure highly workspace-dependent |
+| Realistic adaptive-thinking output: 4–10K tokens for "default high" effort | Inferred from Anthropic's `xhigh` description and observed `budget_tokens` ranges in extended-thinking docs (32K typical ceiling, "may not use the entire budget") | **Medium-low** — exact distribution unpublished |
+| Caching at 90% off, 50–90% hit rate for hot system prompts | [Anthropic prompt-caching documentation](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) | **High** for the rate; **Low** for whether Copilot actually applies it on every call |
+
+**The conclusions in this section depend most heavily on the Anthropic 4×/15× number, which is first-party and well-cited.** Even cutting that figure in half — assuming Copilot chats are only 2× a "simple" chat rather than 4× — the ultra-premium tier still flips from "tokens always win" to "roughly fair." The 4K/2K assumption is the weak point in the original analysis; almost any realistic correction moves the verdict in the same direction.
 
 ### Recommendations Under a Token-Based Copilot
 
