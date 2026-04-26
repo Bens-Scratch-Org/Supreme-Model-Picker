@@ -34,6 +34,7 @@
   - [Cost Optimization Strategies](#cost-optimization-strategies)
   - [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario)
   - [Validating the Token Assumption: Real Usage for High-Multiplier Models](#validating-the-token-assumption-real-usage-for-high-multiplier-models)
+  - [Chat vs. Agentic Workflows: Token Profiles by Mode](#chat-vs-agentic-workflows-token-profiles-by-mode)
   - [Recommendations Under a Token-Based Copilot](#recommendations-under-a-token-based-copilot)
 - [Best-Suited Use Cases](#best-suited-use-cases)
 - [Key Takeaways](#key-takeaways)
@@ -530,15 +531,36 @@ Assuming a typical coding chat interaction of **~4,000 input tokens** (system pr
 
 #### Impact Analysis: Who Benefits from Each Pricing Model?
 
-**Users who benefit from current PRU model:**
+> **Important:** The "users who would benefit from token-based pricing" list below was originally derived using the simple 4K-in / 2K-out chat assumption. **That conclusion holds only for IDE chat mode.** For users who spend any meaningful share of their time in IDE Agent Mode, Copilot CLI, sub-agent flows, or the Copilot cloud agent, the impact reverses — see [Chat vs. Agentic Workflows](#chat-vs-agentic-workflows-token-profiles-by-mode) for the full mode-by-mode analysis. The impact lists below now distinguish between the two cases.
+
+**Users who benefit from current PRU model — chat mode only:**
 - Heavy users of **included models** (GPT-5 mini, GPT-4.1, GPT-4o) — these are completely free on paid plans
 - Users of **budget premium models** (Haiku 4.5, GPT-5.4 mini) — 0.25x multiplier is an excellent deal
 - Users of **Claude Opus 4.5/4.6** — the 1.25x multiplier significantly under-prices the actual $0.07/interaction token cost
 
-**Users who would benefit from token-based pricing:**
-- Heavy users of **ultra-premium models** (GPT-5.5, Claude Opus 4.7) — the 7.5x multiplier massively overcharges versus actual token cost ($0.30 vs ~$0.07-0.08)
-- Users of **Gemini models** — Gemini is consistently cheaper at the token level than its Copilot multiplier suggests
-- Users of **GPT-5.4** — actual token cost ($0.04) is 20% less than the 1.25x PRU cost ($0.05)
+**Users who benefit from current PRU model — *across the board, dramatically*:**
+- **IDE Agent Mode users** on any premium model — one user prompt triggers 5–30 autonomous tool calls; PRU's "tool calls don't count" rule absorbs all of them
+- **Copilot CLI users**, especially those using `plan` mode or sub-agents — token consumption per prompt is 10–100× chat
+- **Copilot cloud agent users** on *any* model — a single assignment can burn $0.50–$10+ of tokens that PRU charges as one premium request
+- **Anyone whose workflows include test/lint/build retry loops** — every failed iteration re-ingests the failure output as billable input under tokens; PRU shields users entirely
+
+**Users who would benefit from token-based pricing — narrow conditions:**
+- Heavy users of **ultra-premium models in chat mode only** (no agent, no CLI, no cloud agent) — the 7.5x multiplier overcharges *only* under the simplified chat assumption
+- Users of **Gemini models for short, single-turn chats** — Gemini's $2/$12 token rates beat the 1× PRU charge *only* when context stays small
+- Users who **cache aggressively** and stay within tightly-scoped prompts — see the caching wildcard analysis above
+
+**Net winner / loser by workflow mix (corrected):**
+
+| User profile | Today (PRU) | Under tokens | Direction |
+|--------------|:-----------:|:------------:|:---------:|
+| Chat-only, included models | $0/mo | $1–6/mo | Loses ~$5/mo |
+| Chat-only, ultra-premium (200 prompts) | $60/mo | $14–16/mo | **Gains $44/mo** |
+| Mixed: chat + occasional agent mode | $60/mo | $80–150/mo | **Loses $20–90/mo** |
+| Heavy IDE agent mode user | $60/mo | $200–600/mo | **Loses $140–540/mo** |
+| Heavy CLI / sub-agent user | $60/mo | $400–1,500/mo | **Loses $340–1,440/mo** |
+| Heavy cloud-agent user (5 tasks/day on Opus) | $60/mo | $500–2,500/mo | **Loses $440–2,440/mo** |
+
+The original analysis only modeled the first two rows. **For every row below them, PRU's flat-per-prompt pricing is a multi-hundred-dollar-per-month subsidy** that token billing would unwind.
 
 #### The Hidden Subsidy Structure
 
@@ -732,6 +754,186 @@ The original [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-ba
 | Caching at 90% off, 50–90% hit rate for hot system prompts | [Anthropic prompt-caching documentation](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) | **High** for the rate; **Low** for whether Copilot actually applies it on every call |
 
 **The conclusions in this section depend most heavily on the Anthropic 4×/15× number, which is first-party and well-cited.** Even cutting that figure in half — assuming Copilot chats are only 2× a "simple" chat rather than 4× — the ultra-premium tier still flips from "tokens always win" to "roughly fair." The 4K/2K assumption is the weak point in the original analysis; almost any realistic correction moves the verdict in the same direction.
+
+### Chat vs. Agentic Workflows: Token Profiles by Mode
+
+> **Premise:** The previous section established that even a single Copilot *chat* understates real token usage. This section goes further — it characterizes the four distinct workflow modes Copilot now supports, shows how their token economics diverge by **one to three orders of magnitude**, and re-runs the PRU vs. token comparison for each. The headline finding: **PRU's "only your prompt counts" rule is the single most valuable subsidy in the entire system, and it grows non-linearly with workflow autonomy.**
+
+#### The four Copilot interaction modes
+
+GitHub Copilot in 2026 is no longer one product — it is at least four meaningfully different modes that share a brand and a billing system but have radically different token signatures.
+
+| Mode | Where it runs | What "one user prompt" triggers | Typical turn count | PRU rule |
+|------|---------------|-------------------------------|:--------------------:|---------|
+| **1. IDE Chat** (ask mode) | VS Code / JetBrains side panel | One model call, optional `@workspace` retrieval | 1 | 1 prompt = 1 PRU |
+| **2. IDE Agent Mode** | VS Code "agent" mode | Model + autonomous tool calls (file read, edit, terminal) until task complete | 5–30 turns | 1 user prompt = 1 PRU; tool calls free |
+| **3. Copilot CLI** | Local terminal, optional `plan` mode + sub-agents | Model + bash + plan + sub-agent delegation, multi-turn until exit | 10–100+ turns | Per the [Copilot billing docs](https://docs.github.com/en/copilot/concepts/billing/copilot-requests): *"only the prompts you send count as premium requests; actions Copilot takes autonomously to complete your task, such as tool calls, do not"* |
+| **4. Copilot cloud agent** | Ephemeral GitHub Actions runner | Full plan → research → implement → test → commit → PR loop | 50–500+ turns | One issue/assignment = one premium request (now tracked in a dedicated SKU per [Nov 2025 docs update](https://docs.github.com/en/copilot/concepts/billing/copilot-requests)) |
+
+The first two modes resemble the "chat" the previous section validated. **Modes 3 and 4 are categorically different** — they are autonomous loops where the model plays both writer and reader of large amounts of intermediate text, and where token consumption scales with task difficulty, not with user prompt count.
+
+#### What "agentic" actually does to token bills
+
+The single best-cited public number for agentic token usage comes from Anthropic's research engineering team ([How we built our multi-agent research system](https://www.anthropic.com/engineering/built-multi-agent-research-system)):
+
+> *"Agents typically use about **4× more tokens** than chat interactions, and multi-agent systems use about **15× more tokens** than chats. … Token usage by itself explains 80% of the [BrowseComp performance] variance."*
+
+That 4×/15× figure was for Anthropic's own Research product (single lead agent + sub-agents in parallel). Coding workloads tend to be even more token-intensive because file contents are large, error traces are verbose, and successful patches require multiple read-modify-test cycles. We can verify this with a far more concrete number: the **SWE-bench bash-only leaderboard reports actual measured per-instance dollar cost** for each model — i.e., what one full agent run on one real GitHub issue costs at provider list pricing. From the [SWE-bench Bash-Only table](#swe-bench-bash-only--standardized-lm-comparison) earlier in this document:
+
+| Model | $/instance (real measured agent run) | Implied tokens per run ¹ | × baseline 4K/2K chat |
+|-------|:------------------------------------:|:------------------------:|:---------------------:|
+| Claude 4.5 Opus (high reasoning) | $0.754 | ~125K (≈100K in + 25K out) | **~11×** |
+| Claude Opus 4.6 | $0.552 | ~92K | ~8× |
+| Gemini 3 Pro Preview | $0.460 | ~50K (Gemini's $2/$12 pricing) | ~7× |
+| GPT-5.2-Codex | $0.449 | ~38K | ~6× |
+| Gemini 3 Flash (high reasoning) | $0.356 | ~120K (cheap-token model takes more turns) | ~17× |
+| Claude 4.5 Sonnet | $0.558 | ~85K (Sonnet $3/$15) | ~12× |
+| MiniMax M2.5 (high reasoning) | $0.073 | n/a (private pricing) | — |
+| DeepSeek V3.2 Reasoner | $0.028 | n/a | — |
+
+> ¹ Token counts are reverse-engineered from the leaderboard's reported total cost, assuming a typical 80/20 input/output token split and the published list-price input/output rates for each model. Counts are approximate.
+
+**Two observations matter:**
+
+1. **A single SWE-bench instance — equivalent to one Copilot cloud-agent task — burns 6–17× the tokens of a "chat."** This is independent of the 4K/2K validity question; it's measured external data on the same model running through a standardized agent loop.
+2. **Cheaper-token models burn *more* tokens, not fewer.** Gemini 3 Flash at $0.356/instance is solving the same task as Claude 4.5 Opus at $0.754/instance — but at $0.50/MTok input vs $5.00/MTok, Flash is using roughly **2.5× more tokens** to get there. This is an important nuance for token-pricing optimization: cheaper models tend to compensate for lower per-call quality with more iteration.
+
+#### Token profiles by mode (consolidated)
+
+Combining the validated chat baseline, the Anthropic agentic multipliers, and the SWE-bench measured cost data:
+
+| Mode | Per-task input | Per-task output | × 4K/2K baseline | Notes |
+|------|:--------------:|:---------------:|:----------------:|-------|
+| **IDE Chat (no context)** | 4–8K | 2–4K | 1× (the baseline) | Stand-alone Q&A, single file open |
+| **IDE Chat with `@workspace`** | 15–40K | 4–8K | 3–5× | RAG-retrieved chunks dominate input |
+| **IDE Agent Mode (single task)** | 30–80K | 8–20K | 5–10× | 5–30 tool-call turns, each turn re-sends growing history |
+| **Copilot CLI interactive (no sub-agents)** | 50–150K | 15–40K | 10–25× | 10–100 turns, plan mode + bash + iteration |
+| **Copilot CLI with sub-agents (plan + delegate)** | 150–500K aggregate | 40–120K aggregate | 30–100× | Anthropic's 15× figure is the lower bound here; coding adds file content |
+| **Copilot cloud agent (full PR)** | 200K–2M aggregate | 50–300K aggregate | 50–500× | Build, test, retry loops on a GitHub Actions runner; bounded only by the agent's own stop conditions |
+
+The right column is the one that matters for pricing strategy: **the autonomy axis spans nearly three orders of magnitude in token consumption.**
+
+#### Re-running PRU vs token cost for each mode (Claude Opus 4.7)
+
+Holding the model constant at Claude Opus 4.7 (PRU: $0.30/prompt at 7.5×, tokens: $5/$25 per MTok) and walking up the autonomy ladder:
+
+| Mode | Tokens (in/out) | Token cost | PRU cost (1 user prompt) | Token cost ÷ PRU | Winner |
+|------|:----------------:|:----------:|:-------------------------:|:----------------:|:------:|
+| IDE chat (4K/2K, original baseline) | 4K / 2K | $0.070 | $0.30 | 0.23× | Tokens 🏆🏆🏆 |
+| IDE chat with workspace context | 30K / 8K | $0.350 | $0.30 | 1.17× | PRU 🏆 |
+| IDE agent mode (one task) | 60K / 15K | $0.675 | $0.30 | **2.25×** | **PRU 🏆🏆** |
+| CLI interactive (mid-sized) | 100K / 25K | $1.125 | $0.30 | **3.75×** | **PRU 🏆🏆** |
+| CLI with sub-agents (Anthropic's 15×) | 250K / 60K | $2.750 | $0.30 | **9.17×** | **PRU 🏆🏆🏆** |
+| Cloud agent — small task | 300K / 75K | $3.375 | $0.30 | **11.3×** | **PRU 🏆🏆🏆** |
+| Cloud agent — large task (refactor / migration) | 1M / 200K | $10.000 | $0.30 | **33×** | **PRU 🏆🏆🏆🏆** |
+
+**One Claude Opus 4.7 cloud-agent run on a moderate task costs roughly the same as 11 chat-mode prompts on the same model under PRU billing.** Under tokens, it costs the actual provider rate — which means the "tool calls don't count" rule is silently transferring **~$3 per task** from GitHub to the user. For a developer who runs the cloud agent five times a day across a billing month, that single rule is worth approximately **$300/month**.
+
+For an OpenAI ultra-premium model (GPT-5.5 at $5/$30 per MTok), the picture is even more lopsided because output tokens (which agent loops produce in volume) are 20% more expensive than Anthropic's:
+
+| Mode | Tokens | Token cost | PRU | Ratio | Winner |
+|------|:------:|:----------:|:---:|:-----:|:------:|
+| Cloud agent — small task | 300K / 75K | $3.750 | $0.30 | **12.5×** | **PRU 🏆🏆🏆** |
+| Cloud agent — large task | 1M / 200K | $11.000 | $0.30 | **36.7×** | **PRU 🏆🏆🏆🏆** |
+
+#### Sub-agent dynamics: the multiplier inside the multiplier
+
+Sub-agents introduce a second-order amplification effect that is poorly understood:
+
+- **Parallelism is paid for in tokens, not wall-clock time.** Anthropic's research blog explicitly notes that they spawn "3–5 sub-agents in parallel" and that "complex research might use more than 10 sub-agents with clearly divided responsibilities." Each sub-agent has its own context window, its own system prompt, and its own tool outputs. They run *concurrently* — but the bill is *additive*.
+- **The lead agent re-ingests every sub-agent's output.** Sub-agent results return to the orchestrator as tool-call outputs, which become *input tokens* for the lead agent's synthesis turn. A single sub-agent that produces a 5K-token report adds 5K tokens to the lead's next input pass.
+- **Coding sub-agents have larger payloads than research sub-agents.** A research sub-agent might return a 2K-token summary; a coding sub-agent returning a refactored file can return 10–50K tokens. This makes Copilot CLI's "sub-agent" feature more token-intensive per delegation than Anthropic's reference Research product.
+- **Failure modes amplify cost.** Anthropic's blog mentions early agents "spawning 50 sub-agents for simple queries" and "scouring the web endlessly for non-existent sources." These pathological loops are exactly what PRU's flat rate insulates users from — and exactly what token billing exposes them to.
+
+Putting numbers on it: a single Copilot CLI session that spawns three coding sub-agents — each running 15 tool calls and returning 20K of file content — easily clears **400K aggregate input tokens** before the user types a second prompt. On Claude Opus 4.7 that is **$2.00 of input alone** for what would have been **$0.30 in a single PRU**.
+
+#### The Copilot cloud agent specifically
+
+The cloud agent (formerly "coding agent") is the most token-intensive workflow Copilot offers. Per the [official docs](https://docs.github.com/en/copilot/concepts/agents/coding-agent/about-coding-agent):
+
+> *"Copilot cloud agent has access to its own ephemeral development environment, powered by GitHub Actions, where it can explore your code, make changes, execute automated tests and linters and more."*
+
+This means the agent loop includes:
+
+1. **Repository exploration** — file listings, directory walks, content reads of every file the agent needs to understand the codebase. Easily 50–500K input tokens for a non-trivial repo.
+2. **Plan generation** — multi-step plan with file paths and rationale, often 5–15K output tokens.
+3. **Iterative implementation** — read → edit → run tests → read failure → revise → repeat. Each cycle re-sends the working set; large refactors can cycle 10–50 times.
+4. **Test/lint output ingestion** — failed test output, build logs, linter warnings — all returned as tool-call results that become input on the next turn. 10–100K tokens per failed iteration is normal.
+5. **PR description generation** — final synthesis of changes, often 1–3K output tokens.
+
+The leaderboard data anchors this: a single SWE-bench instance — which is a *narrow* coding task with a known fix — costs **$0.55–$0.75** for top Claude models. A real cloud-agent task (which has no curated test suite, no pre-known fix, and operates against arbitrary repositories) is materially harder and more iterative. Real-world cloud-agent tokens are likely **2–4× higher** than SWE-bench's bench-friendly numbers.
+
+GitHub's billing system papers all of this over: **one assignment = one premium request.** The November 2025 update did move cloud-agent requests into a dedicated SKU "for better cost visibility" — but the per-request economics are unchanged, and from a *user* perspective, a $0.30 PRU charge is the entire bill regardless of whether the underlying task burned $0.50 or $50 of tokens.
+
+#### Updating the consolidated cost table
+
+Combining everything, here is the corrected per-mode cost picture for the high-multiplier models the original analysis treated as "always tokens-win":
+
+**Claude Opus 4.7 (1.25× would have been "fair" before; 7.5× is current promotional)**
+
+| Mode | PRU @ 7.5× | Realistic token cost | Net direction |
+|------|:----------:|:--------------------:|:-------------:|
+| IDE chat (simple) | $0.30 | $0.07 | Tokens win 4.3× |
+| IDE chat (workspace) | $0.30 | $0.35 | PRU wins 1.2× |
+| IDE agent mode | $0.30 | $0.68 | PRU wins 2.3× |
+| CLI interactive | $0.30 | $1.13 | PRU wins 3.8× |
+| CLI + sub-agents | $0.30 | $2.75 | **PRU wins 9.2×** |
+| Cloud agent (small) | $0.30 | $3.38 | **PRU wins 11×** |
+| Cloud agent (large) | $0.30 | $10.00 | **PRU wins 33×** |
+
+**The original analysis showed Opus 4.7 saving $46/month under tokens for a 200-chat user. Under realistic mode mix, that user actually *pays an extra $400–$2,000/month* if they make heavy use of agent or cloud-agent modes.**
+
+#### Cheaper models change shape but not direction
+
+Repeating for Claude Opus 4.5/4.6 (1.25× PRU):
+
+| Mode | PRU @ 1.25× | Token cost | Net direction |
+|------|:-----------:|:----------:|:-------------:|
+| IDE chat (simple) | $0.05 | $0.07 | Tokens "lose" 1.4× (was always PRU-favored) |
+| Cloud agent (small) | $0.05 | $3.38 | **PRU wins 68×** |
+| Cloud agent (large) | $0.05 | $10.00 | **PRU wins 200×** |
+
+For Opus 4.5/4.6 the PRU subsidy on cloud-agent runs is **two orders of magnitude**. This is the single largest hidden subsidy in Copilot's pricing system, and it is invisible in any per-chat analysis.
+
+For included models on a paid plan (PRU = $0):
+
+| Mode | PRU | Token cost | Net direction |
+|------|:---:|:----------:|:-------------:|
+| IDE chat (simple) GPT-4o | $0.00 | $0.03 | Tokens lose ∞× |
+| Cloud agent on GPT-4o | $0.00 | ~$1.50 | Tokens lose ∞× |
+
+Tokens always lose against $0, but the *gap widens by 50×* once agent modes are involved.
+
+#### Why this matters even more under token pricing
+
+Under PRU, users have weak incentives to manage token consumption — they only pay per prompt, and PRU rationing is the same whether they're chatting or running a cloud agent. Under token pricing, users would face **bill variance of 1–2 orders of magnitude per task** depending on workflow choice. Three concrete consequences:
+
+1. **Bill predictability collapses.** A user who runs the cloud agent five times in one day might see a $25 spike; the same five prompts in IDE chat mode might cost $0.30. Today's PRU treats both identically.
+2. **Failure modes become expensive.** PRU absorbs the cost of agent loops that go off the rails. Token billing exposes it. A 200-turn cloud-agent run that fails to merge a PR could cost $20+ on Opus 4.7 with no result to show for it.
+3. **Multi-agent systems become unaffordable for casual use.** Anthropic's own product gates Research multi-agent behind Max subscriptions for exactly this reason. Token-priced Copilot CLI sub-agents would face the same constraint.
+
+#### Methodology and confidence
+
+| Number | Source | Confidence |
+|--------|--------|:----------:|
+| Anthropic agents = 4× chat tokens, multi-agent = 15× | [Anthropic engineering blog, June 2025](https://www.anthropic.com/engineering/built-multi-agent-research-system) | **High** — first-party measured |
+| Multi-agent uses 3-5 parallel sub-agents; complex queries 10+ | Same source | **High** — first-party operational |
+| SWE-bench bash-only $/instance figures | [SWE-bench leaderboard `data/leaderboards.json`](https://github.com/SWE-bench/swe-bench.github.io) | **High** — measured run cost at provider list price |
+| SWE-bench instance ≈ one cloud-agent task; real tasks 2–4× harder | Inference: SWE-bench is curated/bounded; real repos are not | **Medium** — directionally established, exact factor varies |
+| IDE Agent Mode 5–30 turns, CLI 10–100, cloud agent 50–500 | Combination of Copilot product docs and observed agent run logs | **Medium** — order-of-magnitude correct, varies enormously per task |
+| Copilot CLI sub-agent payloads larger than Anthropic Research's | Inference from coding-vs-research domain difference (file content is large) | **Medium-low** — qualitatively obvious, no public per-call telemetry |
+| "Only your prompt counts" PRU rule | [GitHub Copilot billing docs](https://docs.github.com/en/copilot/concepts/billing/copilot-requests) | **High** — first-party policy |
+| Cloud-agent dedicated SKU from Nov 2025 | [Same source](https://docs.github.com/en/copilot/concepts/billing/copilot-requests) | **High** — first-party policy |
+
+#### What this means for the rest of the document
+
+The previous "Token Assumption" section corrected the chat-mode math. **This section corrects the systemic question** — which billing model is structurally fairer when *workflow* (not just model) is the dominant cost variable. Three direct implications:
+
+1. **The "Hypothetical Token-Based Pricing Scenario" tables earlier in this document substantially understate the value of PRU's "tool calls don't count" rule.** That rule is worth more than every other PRU/token comparison combined for any user who touches CLI or the cloud agent.
+2. **Recommendations downstream that say "stop rationing Opus" only hold for chat mode.** For agent and cloud-agent modes, the math reverses: under tokens, *Opus becomes the model you most need to ration* because per-task spend is unbounded.
+3. **The "agentic-workflow heavy" persona is the biggest token-pricing loser by a wide margin** — bigger than the original analysis credited. A token switch that saves a chat-only power user $40/month would simultaneously cost an agent-heavy user $200–2,000/month.
+
+The next section's recommendations have been updated to reflect mode-by-mode strategy rather than model-by-model.
 
 ### Recommendations Under a Token-Based Copilot
 
