@@ -1,19 +1,30 @@
 # AI Model Analysis: SWE-bench, Scale Labs & GitHub Copilot Cost Analysis
 
-> **Last updated:** April 25, 2026
+> **Last updated:** April 28, 2026
 >
 > A comprehensive analysis of frontier AI models across software engineering, coding, and general capability benchmarks sourced from [SWE-bench](https://www.swebench.com/) and [Scale Labs](https://labs.scale.com/), combined with a cost/performance analysis using [GitHub Copilot](https://docs.github.com/en/copilot/concepts/billing/copilot-requests) and [GitHub Models](https://docs.github.com/en/billing/reference/costs-for-github-models) pricing.
 
 > [!CAUTION]
-> **Claude Opus 4.7's promotional 7.5x multiplier expires April 30, 2026.** After this date, the multiplier is expected to increase significantly. If you rely on Opus 4.7 in Copilot, budget accordingly.
+> **GitHub Copilot is moving to usage-based billing on June 1, 2026.** Premium Request Units (PRUs) are being replaced by **GitHub AI Credits** (1 credit = $0.01 USD), billed by token consumption at published API rates. Plan prices do not change; **the PRU multiplier system goes away for monthly subscribers** and is replaced by direct token metering. Annual Pro/Pro+ subscribers stay on PRUs but face **substantially higher multipliers** (e.g., Claude Opus 4.6: 3× → **27×**; Sonnet 4.5: 1× → **6×**). See the new [GitHub AI Credits & Usage-Based Billing](#github-ai-credits--usage-based-billing-effective-june-1-2026) section. Sources: [GitHub Blog](https://github.blog/news-insights/company-news/github-copilot-is-moving-to-usage-based-billing/) · [docs: orgs/enterprises](https://docs.github.com/en/copilot/concepts/billing/usage-based-billing-for-organizations-and-enterprises) · [docs: models & pricing](https://docs.github.com/en/enterprise-cloud@latest/copilot/reference/copilot-billing/models-and-pricing).
 
 > [!NOTE]
-> **Copilot Pro, Pro+, and Student signups are temporarily paused** as of April 20, 2026 ([source](https://docs.github.com/en/copilot/about-github-copilot/subscription-plans-for-github-copilot)). Existing subscribers are unaffected. GPT-5.5 was released on April 23, 2026.
+> **Copilot Pro, Pro+, and Student signups are temporarily paused** as of April 20, 2026 ([source](https://docs.github.com/en/copilot/about-github-copilot/subscription-plans-for-github-copilot)). Existing subscribers are unaffected. GPT-5.5 was released on April 23, 2026. GitHub has stated usage limits will loosen once usage-based billing is in effect.
 
 ---
 
 ## Table of Contents
 
+- [Executive Summary](#executive-summary)
+- [GitHub AI Credits & Usage-Based Billing (Effective June 1, 2026)](#github-ai-credits--usage-based-billing-effective-june-1-2026)
+  - [What's Changing in One Page](#whats-changing-in-one-page)
+  - [GitHub AI Credits: The New Unit of Billing](#github-ai-credits-the-new-unit-of-billing)
+  - [Plan Allowances Under Usage-Based Billing](#plan-allowances-under-usage-based-billing)
+  - [Pooled Credits for Organizations and Enterprises](#pooled-credits-for-organizations-and-enterprises)
+  - [Budget Controls and What Happens at the Limit](#budget-controls-and-what-happens-at-the-limit)
+  - [Per-Token Pricing for Every Copilot Model](#per-token-pricing-for-every-copilot-model)
+  - [Cost per Interaction in AI Credits](#cost-per-interaction-in-ai-credits)
+  - [Annual Pro / Pro+ Subscribers: Multipliers Are Going Up](#annual-pro--pro-subscribers-multipliers-are-going-up)
+  - [What This Confirms About the Rest of This Document](#what-this-confirms-about-the-rest-of-this-document)
 - [Benchmark Overview](#benchmark-overview)
   - [SWE-bench Benchmarks](#swe-bench-benchmarks)
   - [Scale Labs Benchmarks](#scale-labs-benchmarks)
@@ -32,7 +43,7 @@
   - [Cost-per-Performance Analysis](#cost-per-performance-analysis)
   - [Effective Monthly Budget Scenarios](#effective-monthly-budget-scenarios)
   - [Cost Optimization Strategies](#cost-optimization-strategies)
-  - [Hypothetical: Token-Based Pricing Scenario](#hypothetical-token-based-pricing-scenario)
+  - [Token-Based Pricing Scenario (Now Reality on June 1, 2026)](#token-based-pricing-scenario-now-reality-on-june-1-2026)
   - [Validating the Token Assumption: Real Usage for High-Multiplier Models](#validating-the-token-assumption-real-usage-for-high-multiplier-models)
   - [Chat vs. Agentic Workflows: Token Profiles by Mode](#chat-vs-agentic-workflows-token-profiles-by-mode)
   - [Recommendations Under a Token-Based Copilot](#recommendations-under-a-token-based-copilot)
@@ -40,6 +51,274 @@
 - [Key Takeaways](#key-takeaways)
 - [Methodology Notes](#methodology-notes)
 - [Sources](#sources)
+
+---
+
+## Executive Summary
+
+This document is a single, end-to-end answer to two questions: **which AI model should I use for software engineering work?** and **how much will it cost me inside GitHub Copilot — both today, and after the June 1, 2026 switch to usage-based billing?**
+
+The analysis combines three independent data sources: the [SWE-bench](https://www.swebench.com/) family of benchmarks (Verified, Bash-Only, Multilingual, Multimodal — the gold standard for measuring coding capability), [Scale Labs](https://labs.scale.com/) human-preference and agentic evaluations, and the published per-token API rates of every model that Copilot exposes. On top of that we layer the GitHub Copilot pricing structure — first the current Premium Request Unit (PRU) system, then the GitHub AI Credits system that replaces it on June 1, 2026 — and translate raw benchmark numbers into a real-money $/SWE-bench-issue figure for each model on each plan.
+
+**Headline findings — capability:**
+
+- **Claude leads software engineering.** Claude 4.5 Opus tops SWE-bench Bash-Only at 76.8%, and Claude-based agent stacks own the Verified leaderboard top three at ~79%. Claude Opus 4.6 is statistically tied with GPT-5.2 for #1 on Scale Labs Showdown human preference.
+- **Gemini 3 Flash is the multilingual champion** (72.7% across 9 languages) and a strong cost/performance contender on Bash-Only at 75.8% for $0.36/instance.
+- **MiniMax M2.5 is the dark-horse value leader.** Same 75.8% Bash-Only as Gemini 3 Flash, but at **$0.07/instance** — a 10× cost advantage over Claude Opus.
+- **Open-weight models are within striking distance.** DeepSeek V3.2 (70%) and GLM-5 (72.8%) close most of the gap to frontier models at a fraction of the price.
+- **Multimodal SWE remains hard.** Even the best systems solve only ~36% of issues that include screenshots or diagrams.
+
+**Headline findings — cost (current PRU model, valid through May 31, 2026):**
+
+- **GPT-5 mini, GPT-4.1, and GPT-4o are free on every paid plan.** They are the silent default for routine work.
+- **Claude Haiku 4.5 (0.25×) is the cost king of premium models** — 4× the chat volume of any 1× model at 66.6% SWE-bench.
+- **Claude Opus 4.5/4.6 (1.25×) is the high-end sweet spot** — top SWE-bench scores at only 25% above the standard premium rate.
+- **The 7.5× ultra-premium tier (Claude Opus 4.7, GPT-5.5) overcharges casual chat by ~4×** versus list-price tokens, but **underprices agentic workflows by 30–200×**. Both subsidies are real, both are user-perceived (provider list price vs PRU), and both are about to change.
+
+**Headline findings — billing transition (June 1, 2026):**
+
+- **Premium Request Units are being retired** for monthly subscribers and replaced by **GitHub AI Credits** at a flat 1 credit = $0.01 USD, billed by token consumption (input + output + cached) at the published per-model API rate. Plan prices do not change.
+- **Pooled credits across organizations and enterprises** mean stranded per-seat allowances disappear: a 100-user Copilot Business org gets one 190,000-credit pool ($1,900) shared across the org, rising to 300,000 credits during the June–August promotional period.
+- **The "tool calls don't count" rule of PRU goes away.** Every input, output, and cached token in every agentic step is now billable. Heavy IDE-Agent, CLI, and cloud-agent users will see real, measurable monthly bills where today they see a flat charge.
+- **Annual Pro and Pro+ subscribers stay on PRUs but with much higher multipliers** — Claude Opus 4.6 jumps from 3× to 27×, Sonnet 4.5 from 1× to 6×, GPT-5.4 from 1× to 6×. Annual plans no longer auto-renew and convert to Copilot Free on expiry.
+- **Code completions and Next Edit suggestions remain free and unmetered** on all paid plans.
+- **Copilot code review additionally consumes GitHub Actions minutes** on top of AI Credits.
+
+**What you should actually do:**
+
+| If you are… | Today (PRU) | After June 1 (AI Credits) |
+|-------------|-------------|---------------------------|
+| Casual chat user, included models | Free — keep doing what you're doing | Free — keep doing what you're doing |
+| Premium chat user (Opus 4.5/4.6 in chat) | Best value in Copilot today | Slight cost increase; still excellent value |
+| Heavy ultra-premium chat user (Opus 4.7, GPT-5.5) | Overpaying — 7.5× ≈ 4× true list cost | **Wins** — pay actual token cost, ~75% reduction |
+| IDE Agent Mode user, all premium models | Massively subsidized today | **Loses** — every tool call now billable |
+| Copilot CLI / sub-agent / cloud-agent user | Massively, massively subsidized today | **Loses by 10–200×** — biggest behaviour change in this transition |
+| Annual Pro / Pro+ subscriber | New ~3-9× multipliers eat your allowance | Convert to monthly to access AI Credits, or downgrade to Free at expiry |
+
+The remainder of this document develops each of these findings in detail — capability benchmarks first, then a per-model strengths/weaknesses profile, then the full PRU cost analysis (which still governs billing through May 31, 2026), then a token-based analysis that was originally framed as hypothetical but is now confirmed reality. A new top-level [GitHub AI Credits & Usage-Based Billing](#github-ai-credits--usage-based-billing-effective-june-1-2026) section directly below summarizes the official numbers GitHub has published.
+
+---
+
+## GitHub AI Credits & Usage-Based Billing (Effective June 1, 2026)
+
+> **All figures in this section are sourced from GitHub's official announcement and documentation:** the [GitHub Blog post (April 27, 2026)](https://github.blog/news-insights/company-news/github-copilot-is-moving-to-usage-based-billing/), [Usage-based billing for individuals](https://docs.github.com/en/copilot/concepts/billing/usage-based-billing-for-individuals), [Usage-based billing for organizations and enterprises](https://docs.github.com/en/copilot/concepts/billing/usage-based-billing-for-organizations-and-enterprises), and [Models and pricing](https://docs.github.com/en/enterprise-cloud@latest/copilot/reference/copilot-billing/models-and-pricing). The PRU-based analysis in subsequent sections describes the billing system that remains in effect through **May 31, 2026** and continues to apply to existing annual Pro/Pro+ subscribers until their renewal date.
+
+### What's Changing in One Page
+
+| Aspect | Today (PRU) | June 1, 2026 (AI Credits) |
+|--------|-------------|---------------------------|
+| **Unit of billing** | Premium Request Units, 1 PRU per chat × model multiplier | GitHub AI Credits — 1 credit = $0.01 USD |
+| **What is metered** | User-initiated prompts only; tool calls free | Every input, output, and cached token at published API rates |
+| **Plan prices** | Pro $10, Pro+ $39, Business $19, Enterprise $39 | **Unchanged** |
+| **Code completions** | Unlimited on paid plans | **Unlimited on paid plans (unchanged)** |
+| **Included tier** | GPT-5 mini, GPT-4.1, GPT-4o at 0× on paid plans | No "free models" — every interaction draws credits |
+| **Allowance** | PRUs (e.g., 300/mo Pro, 1,500/mo Pro+) | AI Credits worth your subscription price (e.g., 1,000 = $10 Pro) |
+| **Overage rate** | $0.04 per additional PRU | $0.01 per AI Credit (= published per-token rate) |
+| **Fallback when exhausted** | Auto-downgrade to a cheaper model | **No fallback** — usage gated by budget controls |
+| **Pooling (orgs/enterprises)** | Per-seat, isolated buckets | **Pooled across the billing entity** |
+| **Code review** | One PRU per review | AI Credits **plus** GitHub Actions minutes for the runner |
+| **Annual Pro/Pro+** | PRU multipliers stable | PRU multipliers **increase** (table below); plans don't auto-renew |
+| **Preview bill** | n/a | Available in your **Billing Overview** in early May 2026 |
+
+### GitHub AI Credits: The New Unit of Billing
+
+A **GitHub AI Credit** is a flat, denomination-style billing unit defined as **1 credit = $0.01 USD**. When you use any Copilot feature that calls a model, the interaction's input tokens, output tokens, and cached tokens are each priced at that model's published API rate, summed in dollars, and converted into credits at the fixed cent-per-credit rate.
+
+What is billed in AI Credits:
+
+- Copilot **Chat** (IDE, github.com, mobile)
+- Copilot **CLI**
+- Copilot **cloud agent** (the GitHub Issues→PR autonomous agent)
+- Copilot **Spaces** and **Spark**
+- **Third-party coding agents** that integrate via Copilot
+
+What is **not** billed in AI Credits (and remains unmetered on paid plans):
+
+- **Code completions** (the original ghost-text autocompletion feature)
+- **Next Edit suggestions**
+
+This is a critical preservation: the in-editor "type and accept" experience that drives most of Copilot's daily-active interactions stays free even after the transition.
+
+### Plan Allowances Under Usage-Based Billing
+
+| Plan | Monthly Price | Included AI Credits | Equivalent USD | Promo (Jun–Aug 2026) |
+|------|:------------:|:-------------------:|:--------------:|:--------------------:|
+| Copilot Free | $0 | (limited; not yet specified by GitHub) | — | — |
+| Copilot Pro | $10/mo | **1,000** | $10 | — |
+| Copilot Pro+ | $39/mo | **3,900** | $39 | — |
+| Copilot Business | $19/seat/mo | **1,900** per user | $19 | **3,000** ($30) |
+| Copilot Enterprise | $39/seat/mo | **3,900** per user | $39 | **7,000** ($70) |
+
+The basic equation is "your monthly allowance in dollars equals your subscription price." After the introductory three-month promotional period (June 1 – September 1, 2026), Copilot Business and Enterprise allowances revert to the standard 1,900 / 3,900 numbers above.
+
+### Pooled Credits for Organizations and Enterprises
+
+This is one of the largest *structural* changes. Today, every Copilot Business or Enterprise seat carries an isolated PRU bucket. Heavy users hit their cap while light users leave PRUs on the table.
+
+Under AI Credits, **per-user allowances are pooled at the billing entity level**:
+
+- A 100-seat Copilot Business org receives a single shared pool of **190,000 AI credits** ($1,900) per month — or **300,000 credits** ($3,000) during the June–August promo.
+- Power users can draw more than their nominal 1,900-per-seat allowance; light users effectively donate the difference.
+- Adding licenses mid-cycle increases the pool immediately. Removing licenses mid-cycle does **not** shrink the pool — the reduction takes effect at the start of the next billing cycle.
+
+This eliminates "stranded capacity" and is a meaningful win for orgs whose usage distribution is heavy-tailed (which, empirically, almost all of them are).
+
+### Budget Controls and What Happens at the Limit
+
+Admins gain a four-level budget hierarchy:
+
+1. **Enterprise-level** — covers all orgs, repos, and cost centers under the enterprise.
+2. **Organization-level** — covers all repos in one org.
+3. **Cost-center-level** — covers a single cost center.
+4. **User-level** — covers a single user. A `$0` user budget = no Copilot access at all.
+
+Budgets are denominated in USD; consumption is reported in AI Credits at the fixed 1 credit = $0.01 conversion. Each level can be configured for alerts only, hard caps, or "allow overage at published rates."
+
+When a pool is exhausted:
+
+- If "additional usage" is **allowed** → usage continues at per-token list rates, billed to the org.
+- If "additional usage" is **not allowed** → Copilot is blocked for that scope until the next billing cycle.
+- **There is no automatic fallback to a cheaper model.** This removes a behaviour many users currently rely on as a soft safety net.
+
+### Per-Token Pricing for Every Copilot Model
+
+These are the official per-1M-token rates GitHub publishes for converting model usage into AI Credits. All prices in USD per 1 million tokens; "Cache write" is an Anthropic-only line item.
+
+**OpenAI**
+
+| Model | Category | Input | Cached | Cache Write | Output |
+|-------|---------|:-----:|:------:|:-----------:|:------:|
+| GPT-4.1 ¹ | Versatile | $2.00 | $0.50 | — | $8.00 |
+| GPT-5 mini ¹ | Lightweight | $0.25 | $0.025 | — | $2.00 |
+| GPT-5.2 | Versatile | $1.75 | $0.175 | — | $14.00 |
+| GPT-5.2-Codex | Powerful | $1.75 | $0.175 | — | $14.00 |
+| GPT-5.3-Codex | Powerful | $1.75 | $0.175 | — | $14.00 |
+| GPT-5.4 ² | Versatile | $2.50 | $0.25 | — | $15.00 |
+| GPT-5.4 mini | Lightweight | $0.75 | $0.075 | — | $4.50 |
+| GPT-5.4 nano | Lightweight | $0.20 | $0.02 | — | $1.25 |
+| GPT-5.5 | Powerful | $5.00 | $0.50 | — | $30.00 |
+
+**Anthropic** (cache write priced separately)
+
+| Model | Category | Input | Cached | Cache Write | Output |
+|-------|---------|:-----:|:------:|:-----------:|:------:|
+| Claude Haiku 4.5 | Versatile | $1.00 | $0.10 | $1.25 | $5.00 |
+| Claude Sonnet 4 | Versatile | $3.00 | $0.30 | $3.75 | $15.00 |
+| Claude Sonnet 4.5 | Versatile | $3.00 | $0.30 | $3.75 | $15.00 |
+| Claude Sonnet 4.6 | Versatile | $3.00 | $0.30 | $3.75 | $15.00 |
+| Claude Opus 4.5 | Powerful | $5.00 | $0.50 | $6.25 | $25.00 |
+| Claude Opus 4.6 | Powerful | $5.00 | $0.50 | $6.25 | $25.00 |
+| Claude Opus 4.7 | Powerful | $5.00 | $0.50 | $6.25 | $25.00 |
+
+**Google**
+
+| Model | Category | Input | Cached | Output |
+|-------|---------|:-----:|:------:|:------:|
+| Gemini 2.5 Pro ³ | Powerful | $1.25 | $0.125 | $10.00 |
+| Gemini 3 Flash ⁴ | Lightweight | $0.50 | $0.05 | $3.00 |
+| Gemini 3.1 Pro ³ | Powerful | $2.00 | $0.20 | $12.00 |
+
+**xAI**
+
+| Model | Category | Input | Cached | Output |
+|-------|---------|:-----:|:------:|:------:|
+| Grok Code Fast 1 | Lightweight | $0.20 | $0.02 | $1.50 |
+
+**Fine-tuned (GitHub)**
+
+| Model | Category | Input | Cached | Output |
+|-------|---------|:-----:|:------:|:------:|
+| Raptor mini ⁵ | Versatile | $0.25 | $0.025 | $2.00 |
+| Goldeneye ⁶ | Powerful | $1.25 | $0.125 | $10.00 |
+
+> ¹ GPT-4.1 and GPT-5 mini retain "included" status today; under AI Credits they are simply the cheapest billable models.
+> ² GPT-5.4 pricing applies to prompts ≤272K tokens; long-context surcharge applies above.
+> ³ Gemini 2.5 Pro and 3.1 Pro pricing applies to prompts ≤200K tokens.
+> ⁴ Gemini 3 Flash has no long-context surcharge.
+> ⁵ Raptor mini reuses GPT-5 mini pricing.
+> ⁶ Goldeneye reuses GPT-5.1-Codex (Gemini 2.5 Pro-equivalent) pricing.
+
+### Cost per Interaction in AI Credits
+
+Translating the per-token rates into a useful day-to-day figure: how many credits does a single typical chat consume? Using the same 4K-input / 2K-output assumption used elsewhere in this document (cache misses, no cache write):
+
+| Model | Token cost (4K in + 2K out) | AI Credits | % of Pro $10 budget | % of Pro+ $39 budget |
+|-------|:---------------------------:|:----------:|:-------------------:|:--------------------:|
+| GPT-5 mini | $0.005 | 0.5 | 0.05% | 0.013% |
+| GPT-4.1 | $0.024 | 2.4 | 0.24% | 0.062% |
+| GPT-5.4 mini | $0.012 | 1.2 | 0.12% | 0.031% |
+| Claude Haiku 4.5 | $0.014 | 1.4 | 0.14% | 0.036% |
+| Grok Code Fast 1 | $0.0038 | 0.4 | 0.04% | 0.010% |
+| GPT-5.2 / 5.2-Codex / 5.3-Codex | $0.035 | 3.5 | 0.35% | 0.090% |
+| Claude Sonnet 4.5 / 4.6 | $0.042 | 4.2 | 0.42% | 0.108% |
+| Gemini 3.1 Pro | $0.032 | 3.2 | 0.32% | 0.082% |
+| Gemini 3 Flash | $0.008 | 0.8 | 0.08% | 0.021% |
+| Gemini 2.5 Pro | $0.025 | 2.5 | 0.25% | 0.064% |
+| GPT-5.4 | $0.040 | 4.0 | 0.40% | 0.103% |
+| Claude Opus 4.5 / 4.6 / 4.7 | $0.070 | 7.0 | 0.70% | 0.180% |
+| GPT-5.5 | $0.080 | 8.0 | 0.80% | 0.205% |
+
+A Copilot Pro subscriber on a $10 / 1,000-credit plan can therefore expect roughly:
+
+- **~143 chats** with Claude Opus 4.7 (≈ 19% **more** than today's 7.5×-multiplier allowance of ~40)
+- **~125 chats** with GPT-5.5 (~ 3× today's allowance)
+- **~238 chats** with Claude Sonnet 4.5/4.6 (~80% of today's 1× allowance of 300)
+- **~714 chats** with Claude Haiku 4.5 (vs ~1,200 today at 0.25× — Haiku gets *worse* relative value since the included-tier subsidy disappears)
+- **~2,000 chats** with GPT-5 mini (down from "unlimited" today on paid plans)
+
+This neatly illustrates the directional message of the entire document: **ultra-premium chat gets cheaper, light-and-included usage gets more expensive, and agentic usage gets *much* more expensive** because the per-chat figures above explode when input tokens grow from 4K to 60K, 250K, or 1M tokens (see [Chat vs. Agentic Workflows](#chat-vs-agentic-workflows-token-profiles-by-mode)).
+
+### Annual Pro / Pro+ Subscribers: Multipliers Are Going Up
+
+Subscribers on existing annual Pro or Pro+ plans **stay on the PRU model** until their plan expires, but the multipliers themselves change on June 1, 2026 — almost universally upward. From the official [Models and pricing](https://docs.github.com/en/enterprise-cloud@latest/copilot/reference/copilot-billing/models-and-pricing#model-multipliers-for-annual-copilot-pro-and-copilot-pro-subscribers) docs:
+
+| Model | Current Multiplier | New Multiplier (Jun 1, 2026) | Change |
+|-------|:------------------:|:----------------------------:|:------:|
+| Claude Haiku 4.5 | 0.33 | 0.33 | — |
+| Claude Sonnet 4 | 1 | 1 | — |
+| Claude Sonnet 4.5 | 1 | **6** | 6× |
+| Claude Sonnet 4.6 | 1 | **9** | 9× |
+| Claude Opus 4.5 | 3 | **15** | 5× |
+| Claude Opus 4.6 | 3 | **27** | 9× |
+| Claude Opus 4.7 | 7.5 | **27** | 3.6× |
+| Gemini 2.5 Pro | 1 | 1 | — |
+| Gemini 3 Flash | 0.33 | 0.33 | — |
+| Gemini 3 Pro | 1 | **6** | 6× |
+| Gemini 3.1 Pro | 1 | **6** | 6× |
+| GPT-4o | 0 | 0.33 | from free |
+| GPT-4o mini | 0 | 0.33 | from free |
+| GPT-4.1 | 0 | 1 | from free |
+| GPT-5.1 | 1 | **3** | 3× |
+| GPT-5.1-Codex | 1 | **3** | 3× |
+| GPT-5.1-Codex-Mini | 0.33 | 0.33 | — |
+| GPT-5.1-Codex-Max | 1 | **3** | 3× |
+| GPT-5.2 | 1 | **3** | 3× |
+| GPT-5.2-Codex | 1 | **3** | 3× |
+| GPT-5.3-Codex | 1 | **6** | 6× |
+| GPT-5.4 | 1 | **6** | 6× |
+| GPT-5.4 mini | 0.33 | **6** | 18× |
+| GPT-5 mini | 0 | 0.33 | from free |
+| Grok Code Fast 1 | 0.25 | 0.33 | 1.3× |
+| Raptor mini | 0 | 0.33 | from free |
+
+Annual subscribers should:
+
+1. **Convert to a monthly plan** before renewal to access AI Credits — GitHub will issue prorated credits for the remainder of the annual term.
+2. Or **let the annual plan run out**; it auto-converts to Copilot Free at expiry (no auto-renew).
+3. Or **cancel** mid-term with a prorated refund.
+
+The "cheapest practical route" depends on workload mix. Heavy chat-based Opus 4.7 users will save money by switching to monthly + AI Credits (token cost is far below the new 27× multiplier). Heavy agentic users on any premium model are losing PRU's tool-call subsidy either way and should evaluate carefully — see the [Recommendations Under a Token-Based Copilot](#recommendations-under-a-token-based-copilot) section.
+
+### What This Confirms About the Rest of This Document
+
+The earlier sections of this document — particularly [Hypothetical: Token-Based Pricing Scenario](#token-based-pricing-scenario-now-reality-on-june-1-2026), [Chat vs. Agentic Workflows](#chat-vs-agentic-workflows-token-profiles-by-mode), and [Recommendations Under a Token-Based Copilot](#recommendations-under-a-token-based-copilot) — were written before GitHub's April 27, 2026 announcement, when the migration to token billing was a thought experiment. They are now **descriptive, not predictive**. Specifically:
+
+- The "PRU vs token" comparisons describe the actual cost difference between billing through May 31, 2026 and billing from June 1, 2026 onward.
+- The "hidden subsidy structure" describes what is being unwound: the tool-call subsidy disappears, the ultra-premium overcharge disappears, and the included-tier zero-cost discount disappears.
+- The chat-vs-agent token-profile multipliers (4× single-agent, 15× multi-agent, 33× cloud-agent) directly translate to AI-Credit consumption in the new system.
+- The persona-level winner/loser table previously labeled "under tokens" is now labeled "after June 1, 2026."
+
+The one thing GitHub's announcement *adds* that the original analysis did not anticipate is **pooling**, which materially softens the impact for orgs with heavy-tailed usage and for any team that has historically left PRUs unspent on lighter seats. The main capability and value rankings — Claude on quality, Haiku on budget, Opus 4.5/4.6 on sweet-spot, MiniMax on raw cost-efficiency, Gemini on multilingual — are unchanged by the billing transition.
 
 ---
 
@@ -343,7 +622,7 @@ Each premium model in Copilot has a multiplier that determines how many premium 
 | Claude Opus 4.7 | Anthropic | **7.5x** ² | — | Ultra Premium |
 | GPT-5.5 | OpenAI | **7.5x** ² | — | Ultra Premium |
 
-> ¹ Subject to change. ² Promotional multipliers — Claude Opus 4.7 promotional rate valid until **April 30, 2026**; GPT-5.5 is also at a promotional 7.5x rate (no end date announced).
+> ¹ Subject to change. ² These 7.5× multipliers apply to monthly subscribers only through May 31, 2026 — on June 1, 2026 monthly subscribers move to AI Credits (no Copilot multiplier; pay published per-token rates). Annual Pro/Pro+ subscribers see Claude Opus 4.7 rebased to **27×** on June 1, 2026 (see the [annual multiplier table](#annual-pro--pro-subscribers-multipliers-are-going-up)). GPT-5.5 was launched on April 23, 2026 at a promotional 7.5× rate.
 
 ### GitHub Models Direct API Pricing
 
@@ -467,9 +746,11 @@ Auto mode provides a 10% multiplier discount (e.g., 1x → 0.9x), letting Copilo
 | Complex SWE, deep debugging | Claude Opus 4.5 or 4.6 | 1.25x | Top SWE-bench at modest premium |
 | Critical reasoning, architecture | Claude Opus 4.7 / GPT-5.5 | 7.5x | Only when nothing else will do |
 
-### Hypothetical: Token-Based Pricing Scenario
+### Token-Based Pricing Scenario (Now Reality on June 1, 2026)
 
-> **Scenario:** What if GitHub switched Copilot from the current Premium Request Unit (PRU) model to direct token-based billing — while keeping the existing model multipliers as cost weighting factors?
+> **Update (April 28, 2026):** This section was originally written as a thought experiment about what would happen if GitHub switched Copilot from PRUs to token-based billing. **GitHub announced on April 27, 2026 that exactly this transition will occur on June 1, 2026** — see the new [GitHub AI Credits & Usage-Based Billing](#github-ai-credits--usage-based-billing-effective-june-1-2026) section for the official rates and rules. The numerical analysis below — using provider list prices and the existing Copilot multipliers as a comparison baseline — is preserved because it remains the cleanest way to see *who is being subsidized today and who will pay more under AI Credits*. Treat the "PRU vs Token" math as "billing through May 31 vs billing from June 1 onward." One material difference: GitHub's official AI Credits use the published per-token rates **directly** (1 credit = $0.01 USD, no separate Copilot multiplier), so the "Token Cost" column below is exactly the per-interaction AI Credit charge.
+
+> **Original framing (now confirmed):** What if GitHub switched Copilot from the current Premium Request Unit (PRU) model to direct token-based billing — while keeping the existing model multipliers as cost weighting factors?
 
 #### Provider Direct API Pricing (per 1M tokens)
 
@@ -1059,7 +1340,7 @@ For everyone outside those buckets — and especially for power users of Opus, G
 
 8. **Claude Haiku 4.5 is the Copilot cost king.** At 0.25x multiplier with 66.6% SWE-bench performance, it delivers 4x the interactions of 1x models — the best cost/performance ratio of any premium model in Copilot.
 
-9. **Claude Opus 4.5/4.6 at 1.25x is the sweet spot.** Just 25% more than standard premium models, but delivering the highest SWE-bench scores (75-77%). The 7.5x ultra-premium models (Opus 4.7, GPT-5.5) cost 6x more for marginal gains. Note: Opus 4.7's promotional 7.5x rate expires April 30, 2026 — expect a higher multiplier after that date.
+9. **Claude Opus 4.5/4.6 at 1.25x is the sweet spot.** Just 25% more than standard premium models, but delivering the highest SWE-bench scores (75-77%). The 7.5x ultra-premium models (Opus 4.7, GPT-5.5) cost 6x more for marginal gains. Note: the 7.5× multiplier is moot from June 1, 2026 onward — monthly subscribers move to AI Credits and pay the actual token cost (Opus 4.7 at ~$0.07/chat is ~75% cheaper than today's PRU charge). Annual subscribers see the multiplier rebased to 27× on the same date.
 
 10. **GPT-5 mini is free and viable.** At 56.2% SWE-bench and 0x multiplier on paid Copilot plans, it can handle the majority of routine coding tasks at zero premium cost.
 
@@ -1068,6 +1349,8 @@ For everyone outside those buckets — and especially for power users of Opus, G
 12. **Cost-per-instance reveals huge value gaps.** The bash-only leaderboard's per-instance cost data shows MiniMax M2.5 hits 75.8% for **$0.07/instance** — within 1pp of the #1 Claude 4.5 Opus run that costs **$0.75/instance** (10x more). Open-weight models like DeepSeek V3.2 Reasoner ($0.03) and Kimi K2.5 ($0.15) deliver 60–71% solve rates at a fraction of frontier pricing. Conversely, Gemini 3 Pro at **$0.96/instance** for only 69.6% is the worst headline value of any top-20 model.
 
 13. **The benchmark landscape is fragmenting.** SWE-bench and Scale Labs measure very different things — autonomous bug fixing vs. human preference — and top models differ across these axes. Choose your benchmark based on your use case.
+
+14. **Copilot is moving to usage-based billing on June 1, 2026.** PRUs become **GitHub AI Credits** (1 credit = $0.01 USD, billed by token at published API rates). Plan prices are unchanged; pooled credits replace per-seat buckets for orgs/enterprises; code completions stay free; there is no fallback model when credits are exhausted. The "tool calls don't count" subsidy that has cushioned heavy IDE-Agent, CLI, and cloud-agent users disappears — making model and workflow choice materially more consequential for cost. Annual Pro/Pro+ plans stay on PRUs but with substantially higher multipliers (e.g., Opus 4.6: 3× → 27×). See the [GitHub AI Credits & Usage-Based Billing](#github-ai-credits--usage-based-billing-effective-june-1-2026) section.
 
 ---
 
@@ -1080,8 +1363,8 @@ For everyone outside those buckets — and especially for power users of Opus, G
 - Scores are pulled from the official leaderboard data as of **February–April 2026**.
 - Some models appear in multiple benchmarks; others are only tested in specific contexts.
 - "High reasoning" / "medium reasoning" denotes extended thinking/chain-of-thought modes enabled during inference.
-- **Copilot pricing** is based on the Premium Request Unit (PRU) model. For agentic features, only user-initiated prompts count — autonomous tool calls do not consume premium requests.
-- **Provider API pricing** was cross-referenced against Anthropic's published rates, GitHub Models docs, xAI docs, and the [LiteLLM pricing database](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json). All prices verified as of April 25, 2026.
+- **Copilot pricing** is based on the Premium Request Unit (PRU) model in effect through May 31, 2026. For agentic features under PRU, only user-initiated prompts count — autonomous tool calls do not consume premium requests. From June 1, 2026, monthly Copilot subscribers transition to **GitHub AI Credits** (token-based billing at 1 credit = $0.01 USD). All references to "Hypothetical: Token-Based Pricing" elsewhere in this document describe what that transition makes real. Annual Pro/Pro+ subscribers remain on PRUs with revised multipliers until renewal.
+- **Provider API pricing** was cross-referenced against Anthropic's published rates, GitHub Models docs, xAI docs, and the [LiteLLM pricing database](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json). All prices verified as of April 28, 2026. The per-token rates in the new [GitHub AI Credits](#per-token-pricing-for-every-copilot-model) section come from GitHub's official [Models and pricing](https://docs.github.com/en/enterprise-cloud@latest/copilot/reference/copilot-billing/models-and-pricing) reference.
 - **Model release dates verified via LiteLLM dated entries:** GPT-5.5 → `gpt-5.5-2026-04-23`, Claude Opus 4.7 → `claude-opus-4-7-20260416`, Claude Opus 4.6 → `claude-opus-4-6-20260205`, GPT-5.4 → `gpt-5.4-2026-03-05`, GPT-5.2 → `gpt-5.2-2025-12-11`, Claude Opus 4.5 → `claude-opus-4-5-20251101`.
 - **Validation pass (April 25, 2026):** Every SWE-bench score in this document was reconciled against [`data/leaderboards.json`](https://raw.githubusercontent.com/SWE-bench/swe-bench.github.io/master/data/leaderboards.json) on the official `swe-bench.github.io` repo. Provider list prices (Anthropic Opus 4.5/4.6/4.7, Sonnet 4/4.5/4.6, Haiku 4.5; OpenAI GPT-5/5.1/5.2/5.3-Codex/5.4/5.4-mini/5.5/4.1/4o; Google Gemini 2.5 Pro/Flash, Gemini 3 Pro/Flash, Gemini 3.1 Pro; xAI Grok 3/3-Mini/4) were re-checked against LiteLLM's dated `model_prices_and_context_window.json` entries and matched to the cent. GitHub Copilot multipliers and the 7.5x promotional notes for Opus 4.7 (until 2026-04-30) and GPT-5.5 were re-verified against `docs.github.com/en/copilot/reference/ai-models/supported-models`.
 
@@ -1096,6 +1379,10 @@ For everyone outside those buckets — and especially for power users of Opus, G
 - **Scale Labs Showdown:** [labs.scale.com/showdown](https://labs.scale.com/showdown)
 - **Scale Labs Leaderboards:** [labs.scale.com/leaderboard](https://labs.scale.com/leaderboard)
 - **GitHub Copilot Billing — Premium Requests:** [docs.github.com](https://docs.github.com/en/copilot/concepts/billing/copilot-requests)
+- **GitHub Copilot — Usage-Based Billing Announcement (April 27, 2026):** [github.blog](https://github.blog/news-insights/company-news/github-copilot-is-moving-to-usage-based-billing/)
+- **GitHub Copilot — Usage-Based Billing for Individuals:** [docs.github.com](https://docs.github.com/en/copilot/concepts/billing/usage-based-billing-for-individuals)
+- **GitHub Copilot — Usage-Based Billing for Organizations and Enterprises:** [docs.github.com](https://docs.github.com/en/copilot/concepts/billing/usage-based-billing-for-organizations-and-enterprises)
+- **GitHub Copilot — Models and Pricing (per-token):** [docs.github.com](https://docs.github.com/en/enterprise-cloud@latest/copilot/reference/copilot-billing/models-and-pricing)
 - **GitHub Copilot Plans:** [docs.github.com](https://docs.github.com/en/copilot/about-github-copilot/plans-for-github-copilot)
 - **GitHub Models Multipliers & Costs:** [docs.github.com](https://docs.github.com/en/billing/reference/costs-for-github-models)
 - **GitHub Models Billing:** [docs.github.com](https://docs.github.com/en/billing/concepts/product-billing/github-models)
