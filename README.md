@@ -1,5 +1,7 @@
 # Supreme Model Picker
 
+🔗 **Live site: https://bens-scratch-org.github.io/Supreme-Model-Picker/**
+
 > **What if GitHub Copilot stopped charging in *premium request units* and started charging in *tokens* tomorrow — who actually wins, and who silently pays the bill?**
 
 Today a Copilot chat with **GPT-4o costs $0**. The same chat with **Claude Opus 4.7 costs $0.30**. The actual provider token cost of those two conversations? Roughly **$0.03** and **$0.07**. PRU and tokens disagree by an order of magnitude — *in opposite directions*. And which way they disagree depends entirely on **how** you use Copilot.
