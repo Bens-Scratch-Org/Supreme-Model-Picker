@@ -315,6 +315,27 @@
   </div>
 </section>
 
+<!-- EXPORT TO PDF -->
+<section id="export" class="no-border export-section">
+  <div class="export-wrap">
+    <h2 style="margin-top:0">Take this with you</h2>
+    <p class="section-lede" style="margin-bottom:20px">
+      Export the full data story — narrative, tables, and every D3 visualization — as a
+      single PDF for offline reading or sharing.
+    </p>
+    <button type="button" id="export-pdf" class="btn-primer-primary" aria-label="Export this page to PDF">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <path d="M3.5 1.75a.25.25 0 0 1 .25-.25h6.5a.25.25 0 0 1 .25.25V4.5h-7Zm9 0v3.25H14a.75.75 0 0 1 0 1.5h-1.5v6.75a1.75 1.75 0 0 1-1.75 1.75h-6.5A1.75 1.75 0 0 1 2.5 13.25V6.5H1a.75.75 0 0 1 0-1.5h1.5V1.75C2.5.784 3.284 0 4.25 0h6.5C11.716 0 12.5.784 12.5 1.75ZM4 6.5v6.75c0 .138.112.25.25.25h6.5a.25.25 0 0 0 .25-.25V6.5Z"/>
+        <path d="M5.5 8.5a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75Zm0 2.5a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 0 1.5h-3.5A.75.75 0 0 1 5.5 11Z"/>
+      </svg>
+      <span id="export-pdf-label">Export to PDF</span>
+    </button>
+    <p class="export-hint" id="export-pdf-hint">
+      Generates a multi-page PDF of this entire page. Large pages may take 10–30 seconds.
+    </p>
+  </div>
+</section>
+
 <footer>
   <div>Built with <a href="https://d3js.org">D3.js</a> · Styled with <a href="https://primer.style">GitHub Primer</a> tokens</div>
   <div class="links">
@@ -331,5 +352,6 @@
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
+<script src="export-pdf.js"></script>
 </body>
 </html>

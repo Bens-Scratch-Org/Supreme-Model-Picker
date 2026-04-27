@@ -461,6 +461,182 @@ svg .grid path { display: none; }
 }
 
 /* Footer */
+/* Export-to-PDF section ----------------------------------------- */
+.export-section {
+  text-align: center;
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+.export-wrap {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  background: var(--canvas-subtle);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+}
+.btn-primer-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #ffffff;
+  background-color: var(--success-emphasis);
+  border: 1px solid rgba(31, 35, 40, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+  box-shadow: 0 1px 0 rgba(31, 35, 40, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.btn-primer-primary:hover:not(:disabled) {
+  background-color: #1a7f37;
+}
+.btn-primer-primary:active:not(:disabled) {
+  background-color: #137333;
+  transform: translateY(1px);
+}
+.btn-primer-primary:focus-visible {
+  outline: 2px solid var(--accent-emphasis);
+  outline-offset: 2px;
+}
+.btn-primer-primary:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+.export-hint {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+.btn-primer-primary .spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: btn-spin 0.7s linear infinite;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+
+/* Print stylesheet — used by the "Export to PDF" button which triggers
+   window.print(). Browser handles pagination & SVG natively, which is far
+   more reliable than html2canvas-based libraries for D3/Primer layouts. */
+@page {
+  size: A4 landscape;
+  margin: 12mm 12mm 14mm 12mm;
+}
+
+@media print {
+  /* Force light-on-light printing regardless of OS dark-mode preference. */
+  :root {
+    --canvas-default: #ffffff !important;
+    --canvas-subtle: #f6f8fa !important;
+    --canvas-inset: #eaeef2 !important;
+    --border-default: #d1d9e0 !important;
+    --border-muted: #d8dee4 !important;
+    --fg-default: #1f2328 !important;
+    --fg-muted: #59636e !important;
+    --fg-subtle: #6e7781 !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #1f2328 !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide UI chrome that doesn't belong in the PDF. */
+  .site-header,
+  #export,
+  #export-pdf,
+  #export-pdf-hint,
+  .export-section,
+  .d3-tooltip,
+  .nav-links {
+    display: none !important;
+  }
+
+  /* Each numbered section + the footer starts on a fresh page. */
+  section,
+  footer {
+    break-before: page;
+    page-break-before: always;
+  }
+  /* Hero on page 1, no leading break. */
+  .hero {
+    break-before: avoid;
+    page-break-before: avoid;
+    padding: 24px 24px 16px !important;
+  }
+
+  section {
+    padding: 24px 24px !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  /* Keep visual blocks intact across page boundaries. */
+  .chart-card,
+  .tier-card,
+  .takeaway,
+  .callout,
+  .stat-card,
+  .calc-output,
+  .workflow-table,
+  .hero-stats,
+  .calc-summary,
+  .pill {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4 {
+    break-after: avoid;
+    page-break-after: avoid;
+    break-inside: avoid;
+  }
+  .hero h1 { font-size: 36px !important; line-height: 1.15 !important; }
+  h2 { font-size: 22px !important; }
+
+  /* All D3 charts use viewBox — scale them to fill the printable width
+     instead of rendering at their (much wider) original viewport size. */
+  svg {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block;
+  }
+  .chart-card svg,
+  [id^="chart-"] svg {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 160mm;
+  }
+
+  /* Preserve colored backgrounds (Primer tier badges, callouts, bars). */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Avoid page overflow from wide tables/grids. */
+  .tier-grid,
+  .calc-grid,
+  .workflow-table,
+  .takeaway-list {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  a { color: inherit !important; text-decoration: none !important; }
+}
+
 footer {
   border-top: 1px solid var(--border-default);
   padding: 32px 24px;
