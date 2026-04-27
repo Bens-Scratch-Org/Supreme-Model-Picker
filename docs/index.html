@@ -112,7 +112,7 @@
   </p>
   <div class="chart-card">
     <div class="chart-title">Copilot premium-request multiplier by model</div>
-    <div class="chart-sub">Higher = more PRU per chat. Bars colored by tier.</div>
+    <div class="chart-sub">Higher = more PRU per chat. Bars colored by tier. Multiplier↔list-price-token-cost correlation across these models is <strong>r ≈ 0.80</strong> — real but loose.</div>
     <div id="chart-multipliers"></div>
     <div class="legend" id="legend-multipliers"></div>
     <div class="source-line">Source: <a href="https://docs.github.com/en/copilot/reference/ai-models/supported-models">docs.github.com — Copilot supported models</a></div>
@@ -129,6 +129,17 @@
     <strong>The second toggle re-runs the same comparison at agent-mode token volumes</strong>
     (60K in / 15K out). Watch the ultra-premium bars flip sign.
   </p>
+  <div class="callout warn">
+    <strong>Read this as a <em>user-perceived</em> subsidy, not a P&amp;L subsidy.</strong>
+    Every "subsidy" figure on this page benchmarks the PRU charge against <em>provider list
+    price</em> (Anthropic, OpenAI, Google public API rates). GitHub's actual cost-to-serve
+    is materially lower because of negotiated commit rates, the Microsoft↔OpenAI revenue-share,
+    Azure-hosted inference, and provider-side prompt caching / batch discounts. The
+    <em>relative ordering</em> of subsidies across tiers is preserved, but the
+    <em>absolute</em> GitHub→user transfer is smaller than the bars below imply — and on
+    paid plans the included tier's "zero marginal cost" is bundled into the seat fee, not
+    paid for by GitHub out of pocket.
+  </div>
   <div class="chart-card">
     <div class="chart-controls">
       <div class="toggle-group" id="subsidy-toggle">
@@ -136,8 +147,8 @@
         <button data-mode="agent">Agent mode (60K + 15K)</button>
       </div>
     </div>
-    <div class="chart-title">PRU price minus actual token cost · per task</div>
-    <div class="chart-sub">Right (red) = PRU overcharges &middot; Left (green) = PRU undercharges (subsidizing the user)</div>
+    <div class="chart-title">PRU price minus provider list-price token cost · per task</div>
+    <div class="chart-sub">Right (red) = PRU charges more than list price &middot; Left (green) = PRU charges less than list price (user-perceived subsidy). GitHub's negotiated cost-to-serve is lower than list, so absolute green-side magnitudes overstate the P&amp;L cost to GitHub.</div>
     <div id="chart-subsidy"></div>
   </div>
   <div class="callout warn">
@@ -145,7 +156,10 @@
     The moment a user prompt triggers any kind of agentic loop — workspace context, tool
     calls, tests, sub-agents — the high and ultra tiers flip from the red side to the
     green side. PRU subsidizes <em>users</em> of those tiers in the modes those tiers
-    were designed for.
+    were designed for. Note also that the 1.25×→7.5× jump is a <strong>6× price step against
+    a 1× step in list-price token cost</strong> — that gap reflects reasoning/adaptive-thinking
+    output volume, promotional launch pricing (Opus 4.7's 7.5× rate expires April 30, 2026),
+    and deliberate cross-subsidy of the free and agentic tiers, not raw input/output rates.
   </div>
 </section>
 
