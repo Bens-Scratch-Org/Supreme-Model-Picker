@@ -201,6 +201,60 @@ section h3 {
 .callout.success { border-left-color: var(--success-emphasis); background: var(--success-subtle); }
 .callout strong { display: block; margin-bottom: 4px; }
 
+/* Site-wide announcement bar (June 1, 2026 transition) */
+.announce-bar {
+  background: linear-gradient(90deg, var(--attention-subtle), var(--accent-subtle));
+  border-bottom: 1px solid var(--border-default);
+  padding: 10px 32px;
+  font-size: 13px;
+  color: var(--fg-default);
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.announce-bar .pill {
+  background: var(--attention-emphasis);
+  color: #fff; font-weight: 700; font-size: 11px; letter-spacing: 0.04em;
+  text-transform: uppercase; padding: 2px 8px; border-radius: 999px;
+}
+.announce-bar a { color: var(--accent-fg); font-weight: 600; }
+.announce-bar strong { color: var(--fg-default); }
+
+/* Pooling visualization (Business / Enterprise) */
+.pool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+@media (max-width: 880px) { .pool-grid { grid-template-columns: 1fr; } }
+.pool-card {
+  background: var(--canvas-default); border: 1px solid var(--border-default);
+  border-radius: 10px; padding: 16px;
+}
+.pool-card h4 { margin: 0 0 4px; font-size: 15px; }
+.pool-card .pool-note { font-size: 12px; color: var(--fg-muted); margin: 0 0 12px; }
+.pool-bar {
+  position: relative; height: 28px; border-radius: 6px;
+  background: var(--canvas-subtle); border: 1px solid var(--border-muted);
+  overflow: hidden; margin-bottom: 6px;
+}
+.pool-bar .seg { position: absolute; top: 0; bottom: 0; }
+.pool-bar .seg.power { background: var(--danger-emphasis); }
+.pool-bar .seg.light { background: var(--success-emphasis); }
+.pool-bar .seg.unused { background: var(--accent-subtle); border-left: 1px dashed var(--accent-emphasis); }
+.pool-bar .seg.over { background: repeating-linear-gradient(45deg, var(--danger-emphasis), var(--danger-emphasis) 6px, var(--danger-fg) 6px, var(--danger-fg) 12px); }
+.pool-bar .ref-line { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--fg-default); }
+.pool-bar .ref-label { position: absolute; top: -16px; font-size: 10px; color: var(--fg-muted); transform: translateX(-50%); white-space: nowrap; }
+.pool-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--fg-muted); margin-top: 8px; }
+.pool-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.pool-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.pool-controls {
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: end;
+  background: var(--canvas-default); padding: 14px; border-radius: 10px;
+  border: 1px solid var(--border-default); margin-top: 8px;
+}
+.pool-controls .field { min-width: 170px; }
+.pool-stat {
+  display: inline-flex; gap: 6px; align-items: baseline; font-size: 13px;
+  margin-right: 16px;
+}
+.pool-stat strong { font-variant-numeric: tabular-nums; color: var(--fg-default); }
+.pool-stat span { color: var(--fg-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+
 /* Chart card */
 .chart-card {
   background: var(--canvas-subtle);

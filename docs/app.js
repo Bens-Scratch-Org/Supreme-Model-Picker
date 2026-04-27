@@ -562,7 +562,92 @@
     });
   }
 
-  // -------- Boot --------
+  // -------- Pooling visualization (Business / Enterprise) --------
+  function renderPooling() {
+    const planSel = document.getElementById("pool-plan");
+    const seats   = document.getElementById("pool-seats");
+    const seatsV  = document.getElementById("pool-seats-val");
+    const period  = document.getElementById("pool-promo");
+    const grid    = document.getElementById("pool-grid");
+    if (!planSel || !grid || !window.AI_CREDITS || !window.POOL_SCENARIOS) return;
+
+    const fmtC = d3.format(",");
+
+    function draw() {
+      const planId = planSel.value;
+      const plan = window.AI_CREDITS.plans.find(p =>
+        (planId === "business" && p.id === "business") ||
+        (planId === "enterprise" && p.id === "enterprise"));
+      if (!plan) return;
+      const isPromo = period.value === "promo";
+      const perSeat = isPromo && plan.promoCredits ? plan.promoCredits : plan.credits;
+      const n = +seats.value;
+      seatsV.textContent = fmtC(n);
+      const pool = n * perSeat;
+
+      d3.select("#pool-total").text(fmtC(pool) + " credits");
+      d3.select("#pool-dollar").text("$" + fmtC(Math.round(pool / 100)) + "/mo");
+      d3.select("#pool-perseat").text(fmtC(perSeat) + "c" + (isPromo ? " (promo)" : ""));
+
+      grid.innerHTML = "";
+      window.POOL_SCENARIOS.forEach(s => {
+        const powerSeats  = Math.max(1, Math.round(n * s.powerShare));
+        const lightSeats  = n - powerSeats;
+        const powerCred   = powerSeats * perSeat * s.powerMultiple;
+        const lightCred   = lightSeats * perSeat * s.lightFraction;
+        const total       = powerCred + lightCred;
+        const overage     = Math.max(0, total - pool);
+        const headroom    = Math.max(0, pool - total);
+        // scale axis: max of pool or total
+        const axisMax = Math.max(pool, total) * 1.05;
+
+        const card = document.createElement("div");
+        card.className = "pool-card";
+        const pct = v => (100 * v / axisMax).toFixed(2) + "%";
+        const poolPct = (100 * pool / axisMax).toFixed(2) + "%";
+
+        // Build segments inside the bar: power, light, then either headroom (under pool) OR overage (beyond pool)
+        let segs = "";
+        let acc = 0;
+        segs += `<div class="seg power" style="left:${pct(acc)};width:${pct(powerCred)}" title="Power-user credits"></div>`;
+        acc += powerCred;
+        segs += `<div class="seg light" style="left:${pct(acc)};width:${pct(lightCred)}" title="Light-user credits"></div>`;
+        acc += lightCred;
+        if (headroom > 0) {
+          segs += `<div class="seg unused" style="left:${pct(acc)};width:${pct(headroom)}" title="Headroom"></div>`;
+        }
+        if (overage > 0) {
+          segs += `<div class="seg over" style="left:${poolPct};width:${pct(overage)}" title="Paid overage"></div>`;
+        }
+
+        const fitClass = overage > 0 ? "loss" : "win";
+        const fitLabel = overage > 0
+          ? `Over by $${fmtC(Math.round(overage / 100))}/mo`
+          : `Fits with $${fmtC(Math.round(headroom / 100))}/mo headroom`;
+
+        card.innerHTML = `
+          <h4>${s.label}</h4>
+          <p class="pool-note">${s.note}</p>
+          <div class="pool-bar">
+            <div class="ref-line" style="left:${poolPct}"></div>
+            <div class="ref-label" style="left:${poolPct}">Pool: $${fmtC(Math.round(pool/100))}</div>
+            ${segs}
+          </div>
+          <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:14px">
+            <span class="pool-stat"><span>Total need</span><strong>${fmtC(Math.round(total))}c · $${fmtC(Math.round(total/100))}</strong></span>
+            <span class="pool-stat"><span>Power seats</span><strong>${fmtC(powerSeats)} (${(s.powerShare*100).toFixed(0)}%)</strong></span>
+            <span class="pool-stat"><span>Verdict</span><strong style="color:var(--${overage>0?'danger':'success'}-fg)">${fitLabel}</strong></span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    [planSel, seats, period].forEach(el => el.addEventListener("input", draw));
+    draw();
+  }
+
+
   document.addEventListener("DOMContentLoaded", () => {
     renderKPIs();
     renderTierRationale();
@@ -572,5 +657,6 @@
     renderScatter();
     renderCalculator();
     renderImpact();
+    renderPooling();
   });
 })();

@@ -3,12 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Copilot PRU vs Tokens · A Data Story</title>
-<meta name="description" content="An interactive D3.js walkthrough of GitHub Copilot's PRU billing, the token costs that explain it, and what would change in chat vs. agentic workflows under token-based pricing.">
+<title>Copilot AI Credits vs PRU · A Data Story</title>
+<meta name="description" content="An interactive D3.js walkthrough of GitHub Copilot's transition from Premium Request Units (PRU) to GitHub AI Credits on June 1, 2026 — including pooled credits for Business and Enterprise, per-token model pricing, and chat-vs-agentic workflow impact.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%231f6feb' d='M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+<div class="announce-bar" role="note">
+  <span class="pill">Update · April 27, 2026</span>
+  <span><strong>Copilot is moving to usage-based billing on June&nbsp;1, 2026.</strong>
+    PRUs are being replaced by <strong>GitHub AI Credits</strong> (1 credit = $0.01 USD), billed by token at published API rates. Plan prices are unchanged.
+    The "hypothetical" token-billing scenario in this story is now <em>confirmed reality</em>.
+    <a href="https://github.blog/news-insights/company-news/github-copilot-is-moving-to-usage-based-billing/">Announcement</a> ·
+    <a href="https://docs.github.com/en/copilot/concepts/billing/usage-based-billing-for-organizations-and-enterprises">Pooling for orgs</a> ·
+    <a href="https://docs.github.com/en/enterprise-cloud@latest/copilot/reference/copilot-billing/models-and-pricing">Per-token pricing</a>.
+  </span>
+</div>
 
 <header class="site-header">
   <div class="site-header-inner">
@@ -33,26 +44,29 @@
 </header>
 
 <div class="hero">
-  <span class="eyebrow">A Copilot pricing thought-experiment · revised</span>
-  <h1>If GitHub dropped <span class="accent">PRU billing</span> for <span class="danger">tokens</span>, who actually wins?</h1>
+  <span class="eyebrow">A Copilot pricing story · confirmed June 1, 2026</span>
+  <h1>GitHub is replacing <span class="danger">PRU billing</span> with <span class="accent">AI Credits</span>. Who actually wins?</h1>
   <p class="lede">
     Copilot meters most models in <em>premium request units</em> — fixed-price chats with
     a per-model multiplier. Direct API providers meter in tokens. The two systems disagree
     by an order of magnitude in opposite directions, and which way they disagree depends
-    entirely on how you use Copilot. The first version of this analysis only modeled
-    chat. The corrected version below models <strong>chat, agent mode, Copilot CLI,
-    sub-agents and the cloud agent</strong> — and the verdict reverses for most users.
+    entirely on how you use Copilot. <strong>On June 1, 2026 GitHub is replacing PRUs with
+    GitHub AI Credits</strong> (1 credit = $0.01 USD, billed per token at published API
+    rates). Plan prices are unchanged. This page models <strong>chat, agent mode, Copilot CLI,
+    sub-agents and the cloud agent</strong> across both systems — and adds a dedicated
+    pooling visualization for the Business and Enterprise plans, which now share a single
+    credit pool across the org.
   </p>
   <div class="hero-stats">
     <div class="stat-card down">
       <div class="label">Heaviest PRU markup (chat only)</div>
       <div class="value" id="kpi-markup">—</div>
-      <div class="sub">Opus 4.7 PRU vs simple-chat tokens</div>
+      <div class="sub">Opus 4.7 PRU vs simple-chat tokens — disappears under AI Credits</div>
     </div>
     <div class="stat-card up">
       <div class="label">Heaviest PRU subsidy (cloud agent)</div>
       <div class="value" id="kpi-cloud">—</div>
-      <div class="sub">Same model, large cloud-agent task</div>
+      <div class="sub">Same model, large cloud-agent task — bills as tokens after Jun 1</div>
     </div>
     <div class="stat-card">
       <div class="label">Workflow modes covered</div>
@@ -60,29 +74,31 @@
       <div class="sub">From simple chat to large cloud-agent runs</div>
     </div>
     <div class="stat-card">
-      <div class="label">Anthropic-published anchor</div>
-      <div class="value">15×</div>
-      <div class="sub">Multi-agent tokens vs. plain chat</div>
+      <div class="label">Business pool · 100 seats</div>
+      <div class="value">190k credits</div>
+      <div class="sub">Pooled across the org · 300k during Jun–Aug 2026 promo</div>
     </div>
   </div>
 </div>
 
 <!-- 1. THE QUESTION -->
 <section id="question" class="no-border">
-  <h2><span class="num">1</span>The question, revised</h2>
+  <h2><span class="num">1</span>The question, answered on April 27</h2>
   <p class="section-lede">
     On a paid Copilot plan today, a chat with <strong>GPT-4o costs $0</strong>, a chat with
     <strong>Claude Opus 4.7 costs $0.30</strong>, and the actual provider token cost of those
     two conversations is roughly <strong>$0.03</strong> and <strong>$0.07</strong>. PRU and tokens disagree
-    by an order of magnitude in opposite directions. So — what would actually move if GitHub
-    flipped the switch?
+    by an order of magnitude in opposite directions. <strong>On April 27, 2026 GitHub announced</strong>
+    it is flipping the switch — from <em>premium request units</em> to <em>GitHub AI Credits</em>,
+    metered per token at published API rates — on June 1, 2026. So what actually moves?
   </p>
   <div class="callout">
     <strong>Two-part answer.</strong>
-    <strong>For chat:</strong> ultra-premium gets ~4× cheaper, the free tier disappears,
+    <strong>For chat:</strong> ultra-premium gets ~4× cheaper, the included tier disappears,
     and Gemini wins the mid-tier. <strong>For agentic workflows:</strong> the math reverses
-    completely — PRU's "tool calls don't count" rule is worth $300–$2,000/month for
-    agent-heavy users, and unwinding it would dwarf every other change.
+    completely — PRU's "tool calls don't count" rule was worth $300–$2,000/month for
+    agent-heavy users, and unwinding it dwarfs every other change. <strong>For Business and
+    Enterprise:</strong> credits are <em>pooled</em> across the org — see section 9.
   </div>
 </section>
 
@@ -202,8 +218,8 @@
   <div class="chart-card">
     <div class="chart-controls">
       <div class="toggle-group" id="scatter-toggle">
-        <button class="active" data-mode="pru">PRU pricing (today)</button>
-        <button data-mode="token">Token pricing (hypothetical)</button>
+        <button class="active" data-mode="pru">PRU pricing (until May 31, 2026)</button>
+        <button data-mode="token">AI Credits / token pricing (from June 1, 2026)</button>
       </div>
     </div>
     <div class="chart-title">SWE-bench resolve rate vs. cost per typical chat</div>
@@ -218,8 +234,8 @@
   <h2><span class="num">7</span>Run your own numbers — with workflow mode</h2>
   <p class="section-lede">
     Pick a model, a workflow mode, and a monthly volume. The chart compares your bill
-    under PRU billing (where the workflow mode is irrelevant) versus token billing
-    (where it dominates).
+    today (PRU) versus what it becomes on June 1, 2026 (per-token / AI Credits — where
+    the workflow mode dominates).
   </p>
   <div class="calc-grid">
     <div class="calc-controls">
@@ -247,9 +263,9 @@
     </div>
     <div class="calc-output">
       <div class="calc-summary">
-        <div class="pill"><div class="k">PRU monthly</div><div class="v" id="calc-pru">$0</div></div>
-        <div class="pill"><div class="k">Token monthly</div><div class="v" id="calc-tok">$0</div></div>
-        <div class="pill" id="calc-delta-pill"><div class="k">Delta (PRU − Tokens)</div><div class="v" id="calc-delta">$0</div></div>
+        <div class="pill"><div class="k">PRU monthly (today)</div><div class="v" id="calc-pru">$0</div></div>
+        <div class="pill"><div class="k">AI Credits monthly (Jun 1)</div><div class="v" id="calc-tok">$0</div></div>
+        <div class="pill" id="calc-delta-pill"><div class="k">Delta (PRU − Credits)</div><div class="v" id="calc-delta">$0</div></div>
       </div>
       <div id="chart-calc"></div>
     </div>
@@ -258,44 +274,131 @@
 
 <!-- 8. WINNERS / LOSERS -->
 <section id="impact">
-  <h2><span class="num">8</span>Winners and losers under token billing</h2>
+  <h2><span class="num">8</span>Winners and losers under the new AI Credits billing</h2>
   <p class="section-lede">
-    The corrected impact analysis. Each row models a real user profile under the <em>actual</em>
-    workflow mix that profile uses — not a chat-only assumption. Bars show the
-    monthly-cost range under token pricing (purple) versus today's PRU bill (blue).
+    Each row models a real user profile under the <em>actual</em> workflow mix that profile
+    uses — not a chat-only assumption. Bars show the monthly-cost range under per-token
+    AI Credits pricing (purple) versus today's PRU bill (blue).
   </p>
   <div class="chart-card">
-    <div class="chart-title">Monthly Copilot cost: today (PRU) vs. hypothetical (tokens) by user profile</div>
-    <div class="chart-sub">Blue bar = today's PRU charge. Purple range = token-pricing low/high estimate. Right-of-blue = the user pays more under tokens.</div>
+    <div class="chart-title">Monthly Copilot cost by user profile · today (PRU) vs. June 1, 2026 (AI Credits)</div>
+    <div class="chart-sub">Blue bar = today's PRU charge. Purple range = AI-Credits monthly bill (low/high). Right-of-blue = the user pays more after Jun 1.</div>
     <div id="chart-impact"></div>
   </div>
 </section>
 
-<!-- 9. VERDICT -->
+<!-- 9. POOLING (BUSINESS / ENTERPRISE) -->
+<section id="pooling">
+  <h2><span class="num">9</span>Pooling for Business &amp; Enterprise</h2>
+  <p class="section-lede">
+    Individual <em>Pro</em> and <em>Pro+</em> plans get their AI Credit allowance per seat,
+    burnable only by that user. <strong>Copilot Business and Enterprise pool every seat's
+    allowance into one organization-wide bucket</strong> — heavy users draw from the same
+    pool as light users, smoothing out the per-seat cliff that worried agent-heavy teams.
+    During the introductory period (<strong>June 1 – September 1, 2026</strong>) the
+    Business and Enterprise allowances are increased to <strong>3,000</strong> and
+    <strong>7,000</strong> credits per seat respectively.
+  </p>
+
+  <div class="callout">
+    <strong>Plan allowances at a glance.</strong>
+    Pro $10/mo → 1,000c/seat · Pro+ $39/mo → 3,900c/seat ·
+    <strong>Business $19/mo → 1,900c/seat (3,000c/seat during Jun–Aug 2026, pooled)</strong> ·
+    <strong>Enterprise $39/mo → 3,900c/seat (7,000c/seat during Jun–Aug 2026, pooled)</strong>.
+    Code completions and Next Edit Suggestions remain unmetered.
+  </div>
+
+  <div class="pool-controls">
+    <div class="field">
+      <label for="pool-plan">Plan</label>
+      <select id="pool-plan">
+        <option value="business" selected>Copilot Business</option>
+        <option value="enterprise">Copilot Enterprise</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="pool-seats">Seats <span style="text-transform:none;color:var(--fg-subtle);font-weight:400">(<span id="pool-seats-val">100</span>)</span></label>
+      <input type="range" id="pool-seats" min="5" max="2000" step="5" value="100">
+    </div>
+    <div class="field">
+      <label for="pool-promo">Period</label>
+      <select id="pool-promo">
+        <option value="promo" selected>Jun 1 – Sep 1, 2026 (introductory)</option>
+        <option value="standard">Sep 1, 2026 onward (standard allowance)</option>
+      </select>
+    </div>
+    <div class="field" style="flex:1;min-width:240px">
+      <span class="pool-stat"><span>Pool</span><strong id="pool-total">300,000 credits</strong></span>
+      <span class="pool-stat"><span>= Subsidy</span><strong id="pool-dollar">$3,000/mo</strong></span>
+      <span class="pool-stat"><span>Per seat</span><strong id="pool-perseat">3,000c</strong></span>
+    </div>
+  </div>
+
+  <div class="chart-card" style="margin-top:18px">
+    <div class="chart-title">Four real fleet shapes — does the pool cover the bill?</div>
+    <div class="chart-sub">
+      Each card models 100% of the org's monthly token cost across one of four usage
+      shapes. Green = light-user consumption that fits inside the pool. Red = power-user
+      consumption. The vertical line is your pooled monthly allowance.
+      <strong>Striped overflow = paid usage on top of the subscription.</strong>
+    </div>
+    <div id="pool-grid" class="pool-grid"></div>
+    <div class="pool-legend">
+      <span><i style="background:var(--success-emphasis)"></i>Light-user credits used</span>
+      <span><i style="background:var(--danger-emphasis)"></i>Power-user credits used</span>
+      <span><i style="background:var(--accent-subtle);border:1px dashed var(--accent-emphasis)"></i>Headroom in pool</span>
+      <span><i style="background:repeating-linear-gradient(45deg,var(--danger-emphasis),var(--danger-emphasis) 4px,#fff 4px,#fff 8px)"></i>Overage (paid)</span>
+    </div>
+  </div>
+
+  <div class="callout success" style="margin-top:24px">
+    <strong>Why pooling matters in practice.</strong>
+    A single agent-heavy engineer can easily burn 10,000+ credits/month. Without pooling
+    that engineer either hits a hard wall mid-month or the org has to pre-budget overage
+    seat-by-seat. With pooling the same engineer just dips into the 99 dormant seats'
+    allowances — and the IT admin sees one number, one budget control, one bill. Adding
+    licenses mid-cycle increases the pool immediately. Removing them takes effect at the
+    next billing cycle.
+  </div>
+
+  <div class="callout warn" style="margin-top:12px">
+    <strong>Caveats to read carefully.</strong>
+    There is <em>no automatic fallback</em> to a cheaper model when credits run out — the
+    admin must either set an overage budget, or affected users get blocked. Copilot code
+    review charges <em>both</em> AI Credits <em>and</em> GitHub Actions minutes. Annual
+    Pro/Pro+ subscribers stay on PRU, but per-model multipliers are <em>rebased</em>
+    significantly (Opus 4.6 from 3× to 27×, Sonnet 4.5 from 1× to 6×). See the
+    <a href="https://github.com/Bens-Scratch-Org/Supreme-Model-Picker/blob/main/analysis/model-comparison.md#github-ai-credits--usage-based-billing-effective-june-1-2026">analysis doc</a>
+    for the full multiplier table.
+  </div>
+</section>
+
+<!-- 10. VERDICT -->
 <section id="verdict">
-  <h2><span class="num">9</span>The verdict, rewritten</h2>
+  <h2><span class="num">10</span>The verdict, rewritten</h2>
   <p class="section-lede">
     The PRU model is a deliberate cross-subsidy: ultra-premium chat overcharges fund
     the zero-cost included tier, and PRU's "tool calls don't count" rule funds every
-    agentic workflow on every tier. A token switch would unwind both subsidies — and
-    the second one is much, much larger than the first.
+    agentic workflow on every tier. The June 1 transition unwinds both subsidies — and
+    the second one is much, much larger than the first. <strong>Pooling is GitHub's answer
+    for the second.</strong>
   </p>
   <div class="takeaway-list">
     <div class="takeaway win">
       <h4>✅ Chat-only ultra-premium users save</h4>
-      <p>Opus 4.7 / GPT-5.5 in plain chat mode drop from $0.30 to ~$0.07–0.08 per turn. A 200-prompt user saves ~$44/month.</p>
+      <p>Opus 4.7 / GPT-5.5 in plain chat mode drop from $0.30 to ~$0.07–0.08 per turn. A 200-prompt user saves ~$44/month after Jun 1.</p>
     </div>
     <div class="takeaway lose">
-      <h4>⚠️ The free tier disappears</h4>
+      <h4>⚠️ The included tier disappears</h4>
       <p>GPT-5 mini, GPT-4.1, GPT-4o all start metering at $0.005–$0.030/chat. Casual users on paid plans pay something for the first time.</p>
     </div>
     <div class="takeaway lose">
-      <h4>⚠️ Agent mode users lose hundreds</h4>
-      <p>One IDE agent task burns 5–10× a chat in tokens. Heavy users pay $200–600/mo extra. Sub-agent and cloud-agent users pay $400–2,500/mo extra.</p>
+      <h4>⚠️ Agent mode users lose hundreds — unless pooled</h4>
+      <p>One IDE agent task burns 5–10× a chat in tokens. Heavy individual users pay $200–600/mo extra. On Business/Enterprise, the pool absorbs much of it.</p>
     </div>
     <div class="takeaway lose">
       <h4>⚠️ The cloud agent becomes brutal</h4>
-      <p>One large cloud-agent task = $10+ of tokens at provider list price, vs. $0.30 in PRU. Five tasks/day on Opus = ~$1,500/month extra.</p>
+      <p>One large cloud-agent task = $10+ of tokens at provider list price, vs. $0.30 in PRU. Five tasks/day on Opus = ~$1,500/month extra without pooling.</p>
     </div>
     <div class="takeaway warn">
       <h4>🏷️ Cheap models burn more tokens</h4>
@@ -303,17 +406,26 @@
     </div>
     <div class="takeaway">
       <h4>💾 Caching becomes the budget lever</h4>
-      <p>Anthropic / Gemini cached input is 90% off. A stable 10K-token system prompt becomes effectively free under tokens — PRU never rewarded this.</p>
+      <p>Anthropic / Gemini cached input is 90% off. A stable 10K-token system prompt becomes effectively free under AI Credits — PRU never rewarded this.</p>
+    </div>
+    <div class="takeaway win">
+      <h4>🤝 Pooling is the org's safety net</h4>
+      <p>For Business/Enterprise, allowances pool across the org. The introductory Jun–Aug period adds ~58% (Business) and ~80% (Enterprise) extra credits per seat.</p>
+    </div>
+    <div class="takeaway warn">
+      <h4>📅 Annual Pro/Pro+ multipliers are rebased</h4>
+      <p>Annual subscribers don't move to AI Credits but their PRU multipliers jump (Opus 4.6 3×→27×, Sonnet 4.5 1×→6×, GPT-5.4 mini 0.33×→6×) — economically equivalent.</p>
     </div>
   </div>
 
   <div class="callout success" style="margin-top:32px;">
-    <strong>Bottom line.</strong> Two subsidies hold up Copilot's pricing today.
-    The <em>ultra-premium overcharge</em> funds the free tier, and is the one the
-    original analysis surfaced. The <em>"tool calls don't count" rule</em> is the much
-    bigger subsidy — it funds every autonomous workflow on every tier, and it's invisible
-    in any per-chat comparison. Token pricing would expose both. Casual chat users would
-    notice; agent-heavy users would feel it like a tax.
+    <strong>Bottom line.</strong> Two subsidies hold up Copilot's pricing today. The
+    <em>ultra-premium overcharge</em> funds the included tier. The <em>"tool calls don't
+    count" rule</em> is the much bigger subsidy — it funds every autonomous workflow on
+    every tier. The June 1, 2026 transition exposes both to per-token reality. Casual
+    chat users will notice; agent-heavy individual users will feel it like a tax;
+    Business and Enterprise organizations get pooling and an introductory bonus to
+    cushion the move.
   </div>
 </section>
 

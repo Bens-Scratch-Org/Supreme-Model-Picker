@@ -18,6 +18,8 @@
   const fmtPct = d3.format('+.0%');
   const fmtCompact = d3.format('.2~s');
   const PRU_RATE = 0.04; // $ per PRU at standard overage rate
+  const CREDIT_RATE = 0.01; // 1 GitHub AI Credit = $0.01 USD
+  let BILLING_MODE = 'pru'; // 'pru' (today) | 'credits' (June 1, 2026)
 
   // ----- Model lookup ----------------------------------------------------
   // The Copilot export emits internal model slugs that don't always match the
@@ -130,6 +132,21 @@
 
   $('results').hidden = false;
   buildAssumptionsControls();
+  // Wire up billing-mode toggle (PRU vs AI Credits view)
+  document.querySelectorAll('#billing-toggle button').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#billing-toggle button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      BILLING_MODE = b.dataset.mode;
+      renderSummary();
+      renderReco();
+    });
+  });
+  // Wire up pooled-allowance fit controls
+  ['fit-plan', 'fit-seats', 'fit-period'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', renderPoolFit);
+  });
   recompute();
 
   // ======================================================================
@@ -286,6 +303,7 @@
     renderDailyChart();
     renderProviderChart();
     renderProviderTable();
+    renderPoolFit();
     renderReco();
   }
 
@@ -293,27 +311,44 @@
   function renderSummary() {
     const r = CACHE;
     const delta = r.totalPruCost - r.totalTokenCost;
+    const credits = Math.round(r.totalTokenCost / CREDIT_RATE);
+    const isCredits = BILLING_MODE === 'credits';
 
     $('kpi-int').textContent = fmtInt(r.totalInteractions);
     $('kpi-pru').textContent = fmtInt(Math.round(r.totalPru));
     $('kpi-pru-sub').textContent = `${fmtInt(Math.round(r.totalPru))} premium requests · @ $${PRU_RATE.toFixed(2)} each`;
     $('kpi-pru-cost').textContent = fmtMoney(r.totalPruCost);
     $('kpi-tok-cost').textContent = fmtMoney(r.totalTokenCost);
-    $('kpi-delta').textContent = (delta >= 0 ? '+' : '') + fmtMoney(delta);
     $('kpi-direct').textContent = fmtMoney(r.totalTokenCost);
+    if ($('kpi-credits')) $('kpi-credits').textContent = fmtInt(credits) + 'c';
+
+    if (isCredits) {
+      if ($('kpi-tok-label')) $('kpi-tok-label').textContent = 'AI Credits cost (your June 1 bill)';
+      if ($('kpi-tok-sub')) $('kpi-tok-sub').textContent = 'per-token billing at published API rates';
+      $('kpi-delta').textContent = (delta >= 0 ? '+' : '') + fmtMoney(delta);
+      $('kpi-delta-sub').textContent = delta > 0
+        ? `Switching to AI Credits would save ${fmtMoney(delta)} on this period.`
+        : `Switching to AI Credits would add ${fmtMoney(-delta)} to your bill for this period.`;
+    } else {
+      if ($('kpi-tok-label')) $('kpi-tok-label').textContent = 'Estimated token cost';
+      if ($('kpi-tok-sub')) $('kpi-tok-sub').textContent = 'at provider list price · same interactions';
+      $('kpi-delta').textContent = (delta >= 0 ? '+' : '') + fmtMoney(delta);
+      $('kpi-delta-sub').textContent = delta > 0
+        ? `PRU billing is more expensive than direct tokens for these interactions.`
+        : `PRU billing is cheaper — Copilot is subsidising you by ${fmtMoney(-delta)}.`;
+    }
 
     const card = $('kpi-delta-card');
     card.classList.remove('win', 'loss', 'up', 'down');
     if (Math.abs(delta) < 0.01) {
       card.classList.add('up');
     } else if (delta > 0) {
-      card.classList.add('loss');
+      // PRU > tokens: today you overpay, switching to credits SAVES you → win in credits view
+      card.classList.add(isCredits ? 'win' : 'loss');
     } else {
-      card.classList.add('win');
+      // PRU < tokens: PRU is subsidising you, switching to credits ADDS cost → loss in credits view
+      card.classList.add(isCredits ? 'loss' : 'win');
     }
-    $('kpi-delta-sub').textContent = delta > 0
-      ? `PRU billing is more expensive than direct tokens for these interactions.`
-      : `PRU billing is cheaper — Copilot is subsidising you by ${fmtMoney(-delta)}.`;
     $('kpi-direct-sub').textContent = `${fmtInt(Math.round(r.totalInputTokens / 1e6))}M input + ${fmtInt(Math.round(r.totalOutputTokens / 1e6))}M output tokens at list price`;
 
     // Callout
@@ -324,6 +359,19 @@
       title = 'No priced interactions found';
       body = ' None of the models in this export match a known PRU multiplier or token rate. Check the model breakdown below for the unrecognised slugs.';
       c.classList.add('warn');
+    } else if (isCredits) {
+      // June 1 framing
+      if (delta > 0) {
+        const ratio = r.totalTokenCost > 0 ? r.totalPruCost / r.totalTokenCost : Infinity;
+        title = `Starting June 1, this period would cost ${ratio.toFixed(1)}× less under AI Credits`;
+        body = ` PRU billed ${fmtMoney(r.totalPruCost)} for chats whose per-token bill is ${fmtMoney(r.totalTokenCost)} (${fmtInt(credits)} credits). Net saving: ${fmtMoney(delta)}. Typical of chat-heavy ultra-premium use, where the PRU multiplier outruns the actual token cost.`;
+        c.classList.add('success');
+      } else {
+        const ratio = r.totalPruCost > 0 ? r.totalTokenCost / r.totalPruCost : Infinity;
+        title = `Starting June 1, this period becomes ${ratio.toFixed(1)}× more expensive under AI Credits`;
+        body = ` PRU billed ${fmtMoney(r.totalPruCost)}, but per-token AI Credits would charge ${fmtMoney(r.totalTokenCost)} (${fmtInt(credits)} credits). Net increase: ${fmtMoney(-delta)}. This is the "tool calls don't count" subsidy unwinding — agent mode, CLI, and the cloud agent re-send growing context every turn, and tokens see all of it.`;
+        c.classList.add('warn');
+      }
     } else if (delta > 0) {
       const ratio = r.totalTokenCost > 0 ? r.totalPruCost / r.totalTokenCost : Infinity;
       title = `You paid ${ratio.toFixed(1)}× more in PRU than tokens would have cost`;
@@ -344,6 +392,72 @@
     }
     $('summary-callout-title').textContent = title;
     $('summary-callout-body').innerHTML = body;
+  }
+
+  // ----- Pooled allowance fit (Business / Enterprise) --------------------
+  function renderPoolFit() {
+    const r = CACHE;
+    const planSel = $('fit-plan');
+    const seatsEl = $('fit-seats');
+    const seatsV  = $('fit-seats-val');
+    const period  = $('fit-period');
+    const bar     = $('fit-bar');
+    if (!planSel || !window.AI_CREDITS) return;
+    const plan = window.AI_CREDITS.plans.find(p => p.id === planSel.value);
+    if (!plan) return;
+    const isPromo = period.value === 'promo';
+    const perSeat = (isPromo && plan.promoCredits) ? plan.promoCredits : plan.credits;
+    const seats = +seatsEl.value;
+    seatsV.textContent = fmtInt(seats);
+    const pool = seats * perSeat;
+    const need = Math.round(r.totalTokenCost / CREDIT_RATE); // credits this month
+
+    $('fit-pool').textContent = fmtInt(pool) + 'c';
+    $('fit-pool-dollar').textContent = '$' + fmtInt(Math.round(pool / 100)) + '/mo';
+    $('fit-perseat').textContent = fmtInt(perSeat) + 'c' + (isPromo ? ' (promo)' : '');
+
+    const axisMax = Math.max(pool, need) * 1.05 || 1;
+    const pct = v => (100 * v / axisMax).toFixed(2) + '%';
+    const poolPct = pct(pool);
+
+    let segs = '';
+    if (need <= pool) {
+      segs += `<div class="seg power" style="left:0;width:${pct(need)};background:var(--accent-emphasis)" title="Your usage"></div>`;
+      segs += `<div class="seg unused" style="left:${pct(need)};width:${pct(pool - need)}" title="Headroom"></div>`;
+    } else {
+      segs += `<div class="seg power" style="left:0;width:${poolPct};background:var(--accent-emphasis)" title="Inside pool"></div>`;
+      segs += `<div class="seg over" style="left:${poolPct};width:${pct(need - pool)}" title="Overage"></div>`;
+    }
+    bar.innerHTML = `
+      <div class="ref-line" style="left:${poolPct}"></div>
+      <div class="ref-label" style="left:${poolPct}">Pool: $${fmtInt(Math.round(pool/100))}</div>
+      ${segs}
+    `;
+
+    const overage = Math.max(0, need - pool);
+    const headroom = Math.max(0, pool - need);
+    $('fit-title').textContent = overage > 0
+      ? `Your month exceeds the pool by ${fmtInt(overage)} credits ($${fmtInt(Math.round(overage/100))})`
+      : `Your month fits inside the pool with ${fmtInt(headroom)} credits ($${fmtInt(Math.round(headroom/100))}) headroom`;
+    $('fit-sub').textContent = `Projection assumes everyone in your ${seats}-seat fleet runs the same workload mix as the file you uploaded.`;
+
+    let summaryHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:18px">
+        <span class="pool-stat"><span>Need</span><strong>${fmtInt(need)}c · $${fmtInt(Math.round(need/100))}</strong></span>
+        <span class="pool-stat"><span>Pool</span><strong>${fmtInt(pool)}c · $${fmtInt(Math.round(pool/100))}</strong></span>
+        <span class="pool-stat"><span>Verdict</span><strong style="color:var(--${overage>0?'danger':'success'}-fg)">${overage > 0 ? 'Overage of $'+fmtInt(Math.round(overage/100)) : 'Headroom of $'+fmtInt(Math.round(headroom/100))}</strong></span>
+      </div>
+    `;
+    if (overage > 0) {
+      // seats needed to absorb
+      const seatsNeeded = Math.ceil(need / perSeat);
+      summaryHTML += `<p style="margin-top:14px;font-size:13px;color:var(--fg-muted)">To absorb this month entirely inside the pool you would need <strong style="color:var(--fg-default)">${fmtInt(seatsNeeded)}</strong> seats at the current per-seat allowance, or you can set an overage budget of at least <strong style="color:var(--fg-default)">$${fmtInt(Math.round(overage/100))}/mo</strong>.</p>`;
+    } else {
+      // how many extra seats of consumption could fit
+      const headroomSeats = Math.floor(headroom / perSeat);
+      summaryHTML += `<p style="margin-top:14px;font-size:13px;color:var(--fg-muted)">The pool has room for roughly <strong style="color:var(--fg-default)">${fmtInt(headroomSeats)}</strong> more seats of equivalent usage before any overage is billed. Without pooling, an individual seat exceeding ${fmtInt(perSeat)} credits would have been blocked or billed for overage on its own.</p>`;
+    }
+    $('fit-summary').innerHTML = summaryHTML;
   }
 
   // ----- Profile assumption controls ------------------------------------
@@ -757,7 +871,7 @@
       items.push({
         kind: 'warn',
         title: 'Premium-tier models in chat-mode are overpaying vs tokens',
-        body: `<strong>${heavyChatPremium.map(m => m.name).join(', ')}</strong> account for ${fmtMoney(heavyChatPremium.reduce((s, m) => s + (m.pruCost - m.tokenCost), 0))} of "PRU charged more than tokens would". Under a token-billed Copilot, casual chat with these models would actually get cheaper. Consider routing simple Q&A to a Standard-tier or Included model — the SWE-bench gap on routine tasks is small.`,
+        body: `<strong>${heavyChatPremium.map(m => m.name).join(', ')}</strong> account for ${fmtMoney(heavyChatPremium.reduce((s, m) => s + (m.pruCost - m.tokenCost), 0))} of "PRU charged more than tokens would". <strong>Starting June 1, 2026 these become cheaper</strong> when AI Credits replaces PRU. For any usage left on PRU until then, consider routing simple Q&A to a Standard-tier or Included model — the SWE-bench gap on routine tasks is small.`,
       });
     }
 
@@ -769,8 +883,8 @@
     if (agentSubsidy > 1) {
       items.push({
         kind: 'success',
-        title: `Agent / CLI workflows are subsidised by ${fmtMoney(agentSubsidy)}`,
-        body: `Copilot's "tool calls don't count" rule means autonomous turns re-send growing context but only the original user prompt charges PRU. Your top subsidised feature is <strong>${agentFeatures[0].label}</strong> — token cost ${fmtMoney(agentFeatures[0].tokenCost)} vs PRU charged ${fmtMoney(agentFeatures[0].pruCost)}. If Copilot ever switched to per-token billing, this is exactly the workflow that would get most expensive.`,
+        title: `Agent / CLI workflows are subsidised by ${fmtMoney(agentSubsidy)} until May 31, 2026`,
+        body: `Copilot's "tool calls don't count" rule means autonomous turns re-send growing context but only the original user prompt charges PRU. Your top subsidised feature is <strong>${agentFeatures[0].label}</strong> — token cost ${fmtMoney(agentFeatures[0].tokenCost)} vs PRU charged ${fmtMoney(agentFeatures[0].pruCost)}. <strong>On June 1, 2026 this subsidy ends</strong> — these workflows will bill at full per-token AI Credit rates. For Business/Enterprise the pooled allowance below cushions some of the impact.`,
       });
     }
 
@@ -785,7 +899,7 @@
       items.push({
         kind: 'info',
         title: `${fmtInt(includedInteractions)} interactions on Included-tier models`,
-        body: `These cost you $0 in PRU but ~${fmtMoney(includedTokenCost)} at provider list price. That's the seat-fee subsidy in action. Under a hypothetical token-billed Copilot, the Included tier disappears — every prompt would carry a marginal cost.`,
+        body: `These cost you $0 in PRU but ~${fmtMoney(includedTokenCost)} at provider list price. That's the seat-fee subsidy in action. <strong>The Included tier disappears on June 1, 2026</strong> — every prompt will carry a marginal AI-Credit cost (≈${fmtInt(Math.round(includedTokenCost / CREDIT_RATE))} credits for this period).`,
       });
     }
 
@@ -793,15 +907,31 @@
     if (delta > 0) {
       items.push({
         kind: 'info',
-        title: 'Bottom line: tokens would (probably) save you money',
-        body: `Across this report window your usage skews towards short interactions on premium-tier models. A token-billed Copilot would cost you roughly <strong>${fmtMoney(r.totalTokenCost)}</strong> for these same actions vs <strong>${fmtMoney(r.totalPruCost)}</strong> in PRU — a ${fmtMoney(delta)} reduction. But this depends entirely on the per-feature token profiles you picked above. Try increasing chat sizes (most enterprise users are closer to the @workspace 25K profile than the bare 4K profile) and watch the gap close.`,
+        title: 'Bottom line: AI Credits will save you money on June 1',
+        body: `Across this report window your usage skews towards short interactions on premium-tier models. Starting June 1, 2026 the same actions cost roughly <strong>${fmtMoney(r.totalTokenCost)}</strong> in AI Credits vs <strong>${fmtMoney(r.totalPruCost)}</strong> in PRU today — a ${fmtMoney(delta)} reduction. This depends entirely on the per-feature token profiles you picked above; with bigger chat contexts (closer to @workspace 25K) the gap closes.`,
       });
     } else if (delta < 0) {
       items.push({
-        kind: 'info',
-        title: 'Bottom line: PRU is the better deal for this usage pattern',
-        body: `You're an agent-heavy user — most interactions are autonomous tool runs that bill 1 PRU but burn 50–200× the tokens of a plain chat. A token-billed Copilot would cost roughly <strong>${fmtMoney(r.totalTokenCost)}</strong> vs your current <strong>${fmtMoney(r.totalPruCost)}</strong>. The PRU multiplier system is hiding ${fmtMoney(-delta)} of provider cost from you each report period.`,
+        kind: 'warn',
+        title: 'Bottom line: AI Credits will cost you more on June 1',
+        body: `You're an agent-heavy user — most interactions are autonomous tool runs that bill 1 PRU but burn 50–200× the tokens of a plain chat. From June 1, 2026 these same workflows will cost roughly <strong>${fmtMoney(r.totalTokenCost)}</strong> in AI Credits vs your current <strong>${fmtMoney(r.totalPruCost)}</strong>. The PRU multiplier system has been hiding ${fmtMoney(-delta)} of provider cost per report period. <strong>Action items:</strong> set an overage budget; if on Business/Enterprise rely on pooling (see section 7); reduce repeated context in long agent runs to amplify cached-input discounts.`,
       });
+    }
+
+    // Pattern 5: pooling-aware reco for Business / Enterprise
+    if (window.AI_CREDITS) {
+      const credits = Math.round(r.totalTokenCost / CREDIT_RATE);
+      const biz = window.AI_CREDITS.plans.find(p => p.id === 'business');
+      const ent = window.AI_CREDITS.plans.find(p => p.id === 'enterprise');
+      if (biz && ent && credits > 0) {
+        const bizSeats = Math.ceil(credits / biz.promoCredits);
+        const entSeats = Math.ceil(credits / ent.promoCredits);
+        items.push({
+          kind: 'info',
+          title: 'Pooled-allowance fit (Business / Enterprise)',
+          body: `This period needs roughly <strong>${fmtInt(credits)} credits</strong>. During the introductory window (Jun 1 – Sep 1, 2026) one Business pool covers it with <strong>${fmtInt(bizSeats)}</strong> seats, or one Enterprise pool with <strong>${fmtInt(entSeats)}</strong> seats. After Sep 1 the standard allowances apply: ${fmtInt(Math.ceil(credits / biz.credits))} Business / ${fmtInt(Math.ceil(credits / ent.credits))} Enterprise seats. See section 7 to model your real fleet.`,
+        });
+      }
     }
 
     for (const it of items) {
