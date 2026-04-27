@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Copilot Usage · Upload &amp; Visualise</title>
+<meta name="description" content="Upload your Copilot Usage Data NDJSON export and explore an interactive summary — interactions, code generation, acceptance, model and language mix, IDE share, and CLI token usage.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%231f6feb' d='M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.7 7.7 0 018 4.6c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>Your Copilot Usage</span>
+    </div>
+    <nav class="nav-links">
+      <a href="index.html">← Pricing data story</a>
+      <a href="#upload">Upload</a>
+      <a href="#overview">Overview</a>
+      <a href="#daily">Daily activity</a>
+      <a href="#features">Features</a>
+      <a href="#models">Models</a>
+      <a href="#languages">Languages</a>
+      <a href="#users">Users</a>
+      <a href="#cli">CLI</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <span class="eyebrow">Your usage · uploaded locally</span>
+  <h1>Drop your <span class="accent">Copilot Usage Data</span> export to see <span class="accent">what it actually says</span>.</h1>
+  <p class="lede">
+    GitHub's enterprise Copilot usage export is a per-user, per-day NDJSON stream of every
+    interaction, code suggestion, acceptance, language, feature, model, IDE and CLI token
+    burn. Drop your <code>.ndjson</code> file below and this page will parse it
+    <strong>entirely in your browser</strong> — nothing is uploaded — and turn it into a
+    summary you can scroll through, screenshot, or print.
+  </p>
+</div>
+
+<!-- 1. UPLOAD -->
+<section id="upload" class="no-border">
+  <h2><span class="num">1</span>Upload your export</h2>
+  <p class="section-lede">
+    Expected format: one JSON object per line (NDJSON / JSONL), as produced by the
+    <a href="https://docs.github.com/en/rest/copilot/copilot-metrics">Copilot metrics export</a>.
+    Files up to a few hundred MB are fine — parsing is incremental.
+  </p>
+
+  <div class="upload-card" id="dropzone">
+    <input type="file" id="file-input" accept=".ndjson,.jsonl,.json,application/x-ndjson,application/json,text/plain" hidden>
+    <div class="dz-icon" aria-hidden="true">
+      <svg width="36" height="36" viewBox="0 0 16 16" fill="currentColor"><path d="M7.25 10.25a.75.75 0 0 0 1.5 0V4.56l1.97 1.97a.75.75 0 1 0 1.06-1.06L8.53 2.22a.75.75 0 0 0-1.06 0L4.22 5.47a.75.75 0 0 0 1.06 1.06l1.97-1.97v5.69ZM3.5 12.25a.75.75 0 0 0-1.5 0v1.5A1.75 1.75 0 0 0 3.75 15.5h8.5A1.75 1.75 0 0 0 14 13.75v-1.5a.75.75 0 0 0-1.5 0v1.5a.25.25 0 0 1-.25.25h-8.5a.25.25 0 0 1-.25-.25v-1.5Z"/></svg>
+    </div>
+    <div class="dz-headline">Drop a <code>.ndjson</code> file here</div>
+    <div class="dz-sub">or <button type="button" id="file-pick" class="link-btn">choose a file</button> from your computer</div>
+    <div class="dz-meta" id="dz-meta">No file loaded yet.</div>
+    <div class="dz-actions">
+      <button type="button" id="reset-btn" class="btn-secondary" hidden>Clear &amp; upload another file</button>
+    </div>
+    <div class="dz-privacy">
+      🔒 All parsing runs in your browser. Your data never leaves this page.
+    </div>
+  </div>
+
+  <div class="callout danger" id="parse-error" hidden>
+    <strong>Couldn't parse that file.</strong>
+    <span id="parse-error-msg"></span>
+  </div>
+</section>
+
+<!-- Everything below is hidden until a file is loaded -->
+<div id="results" hidden>
+
+<!-- 2. OVERVIEW -->
+<section id="overview">
+  <h2><span class="num">2</span>Overview</h2>
+  <p class="section-lede" id="overview-lede">Headline figures across every row in the file.</p>
+  <div class="hero-stats">
+    <div class="stat-card"><div class="label">Active users</div><div class="value" id="kpi-users">—</div><div class="sub" id="kpi-users-sub">unique <code>user_login</code> values</div></div>
+    <div class="stat-card"><div class="label">Date range</div><div class="value" id="kpi-range">—</div><div class="sub" id="kpi-range-sub">earliest → latest <code>day</code></div></div>
+    <div class="stat-card"><div class="label">User-initiated interactions</div><div class="value" id="kpi-interactions">—</div><div class="sub">prompts / chat turns sent</div></div>
+    <div class="stat-card"><div class="label">Code generations</div><div class="value" id="kpi-gens">—</div><div class="sub">suggestions Copilot produced</div></div>
+    <div class="stat-card up"><div class="label">Acceptances</div><div class="value" id="kpi-accepts">—</div><div class="sub" id="kpi-accept-rate">— acceptance rate</div></div>
+    <div class="stat-card"><div class="label">Lines added (accepted)</div><div class="value" id="kpi-loc-added">—</div><div class="sub" id="kpi-loc-sub"><span id="kpi-loc-suggested">—</span> suggested</div></div>
+  </div>
+</section>
+
+<!-- 3. DAILY ACTIVITY -->
+<section id="daily">
+  <h2><span class="num">3</span>Daily activity</h2>
+  <p class="section-lede">
+    Aggregated across every user, per <code>day</code>. Use this to spot weekday/weekend
+    patterns, holiday gaps, or rollout spikes.
+  </p>
+  <div class="chart-card">
+    <div class="chart-controls">
+      <div class="toggle-group" id="daily-toggle">
+        <button class="active" data-mode="all">All series</button>
+        <button data-mode="interactions">Interactions only</button>
+        <button data-mode="generation">Generation &amp; acceptance</button>
+      </div>
+    </div>
+    <div class="chart-title">Daily totals across the export window</div>
+    <div class="chart-sub">Hover any day for exact counts. Acceptance rate shown in the tooltip.</div>
+    <div id="chart-daily"></div>
+    <div class="legend" id="legend-daily"></div>
+  </div>
+</section>
+
+<!-- 4. FEATURES -->
+<section id="features">
+  <h2><span class="num">4</span>Where the activity comes from</h2>
+  <p class="section-lede">
+    Each row reports activity broken down by feature (chat panel, agent edit, agent mode,
+    custom mode, CLI, etc). Bars sum the user-initiated interaction count for each feature
+    across every row.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Interactions by Copilot feature</div>
+    <div class="chart-sub">Top features by total user-initiated interactions. <code>chat_panel_agent_mode</code> dominates most enterprise exports.</div>
+    <div id="chart-features"></div>
+  </div>
+</section>
+
+<!-- 5. MODELS -->
+<section id="models">
+  <h2><span class="num">5</span>Models in use</h2>
+  <p class="section-lede">
+    Breakdown by model name as reported in <code>totals_by_model_feature</code>. This is the
+    single most useful view for spotting whether your org actually picks the model the
+    Pricing analysis predicts they should.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Top models by interactions and generations</div>
+    <div class="chart-sub">Blue = user-initiated interactions · Purple = code generations. Sorted by interactions.</div>
+    <div id="chart-models"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>Interactions</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--done-emphasis)"></span>Code generations</span>
+    </div>
+  </div>
+</section>
+
+<!-- 6. LANGUAGES -->
+<section id="languages">
+  <h2><span class="num">6</span>Languages</h2>
+  <p class="section-lede">
+    Code generation is bucketed by language. Lines added counts only the suggestions the
+    user actually accepted into a file.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Top languages by lines accepted</div>
+    <div class="chart-sub">Sorted by <code>loc_added_sum</code>. <code>loc_suggested_to_add_sum</code> shown for context.</div>
+    <div id="chart-languages"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--success-emphasis)"></span>Lines added (accepted)</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-subtle); border:1px solid var(--accent-emphasis)"></span>Lines suggested</span>
+    </div>
+  </div>
+</section>
+
+<!-- 7. IDE SPLIT -->
+<section id="ide">
+  <h2><span class="num">7</span>IDE &amp; surface split</h2>
+  <p class="section-lede">VS Code vs JetBrains vs Visual Studio vs the web — and where the CLI fits.</p>
+  <div class="chart-card">
+    <div class="chart-title">Interactions by IDE / surface</div>
+    <div class="chart-sub">Sums <code>totals_by_ide.user_initiated_interaction_count</code> per IDE name. CLI rows (which don't ship in <code>totals_by_ide</code>) are added as a synthesized "copilot-cli" surface.</div>
+    <div id="chart-ide"></div>
+  </div>
+</section>
+
+<!-- 8. TOP USERS -->
+<section id="users">
+  <h2><span class="num">8</span>Most active users</h2>
+  <p class="section-lede">
+    Top 15 users by total interactions. Row tooltips include their generations, acceptances,
+    acceptance rate, and active days.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Top users by user-initiated interactions</div>
+    <div class="chart-sub">Color encodes acceptance rate (red = low, green = high).</div>
+    <div id="chart-users"></div>
+  </div>
+</section>
+
+<!-- 9. CLI / TOKENS -->
+<section id="cli">
+  <h2><span class="num">9</span>Copilot CLI &amp; tokens</h2>
+  <p class="section-lede">
+    Only rows with <code>used_cli: true</code> contribute here. The CLI is the only surface
+    that publishes raw token counts in this export — useful for cross-referencing PRU
+    against actual provider token spend.
+  </p>
+  <div class="hero-stats">
+    <div class="stat-card"><div class="label">CLI users</div><div class="value" id="kpi-cli-users">—</div><div class="sub">unique users with <code>used_cli</code></div></div>
+    <div class="stat-card"><div class="label">CLI sessions</div><div class="value" id="kpi-cli-sessions">—</div><div class="sub" id="kpi-cli-sessions-sub">sum of <code>session_count</code></div></div>
+    <div class="stat-card"><div class="label">Prompt tokens</div><div class="value" id="kpi-cli-prompt">—</div><div class="sub">input tokens sent</div></div>
+    <div class="stat-card"><div class="label">Output tokens</div><div class="value" id="kpi-cli-output">—</div><div class="sub" id="kpi-cli-avg-sub">— avg / request</div></div>
+  </div>
+  <div class="chart-card" id="cli-chart-card">
+    <div class="chart-title">CLI prompt &amp; output tokens by day</div>
+    <div class="chart-sub">Stacked area — output stacked on top of prompt input. Days with zero CLI activity drop to baseline.</div>
+    <div id="chart-cli"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>Prompt tokens</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--done-emphasis)"></span>Output tokens</span>
+    </div>
+  </div>
+  <div class="callout" id="cli-empty" hidden>
+    <strong>No CLI activity in this export.</strong>
+    None of the rows had <code>used_cli: true</code>, so the CLI charts above are empty.
+  </div>
+</section>
+
+</div><!-- /#results -->
+
+<footer>
+  <div>Built with <a href="https://d3js.org">D3.js</a> · Styled with <a href="https://primer.style">GitHub Primer</a> tokens · Parsed entirely in your browser</div>
+  <div class="links">
+    <a href="index.html">Pricing data story</a> ·
+    <a href="https://docs.github.com/en/rest/copilot/copilot-metrics">Copilot metrics API</a> ·
+    <a href="https://github.com/Bens-Scratch-Org/Supreme-Model-Picker">Source</a>
+  </div>
+</footer>
+
+<div class="d3-tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="usage.js"></script>
+</body>
+</html>
