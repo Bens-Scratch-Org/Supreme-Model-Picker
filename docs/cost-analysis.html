@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your PRU vs Token Cost · Copilot Usage Analysis</title>
+<meta name="description" content="Compare what you actually paid in Copilot Premium Request Units (PRU) against what those same interactions would cost at provider list-price tokens. Built from your uploaded usage export — runs entirely in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%231f6feb' d='M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* page-local tweaks: cost analysis tables + tier badges */
+  .cost-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cost-table th, .cost-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-muted); text-align: right; white-space: nowrap; }
+  .cost-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-muted); font-weight: 600; background: var(--canvas-subtle); position: sticky; top: 0; }
+  .cost-table th:first-child, .cost-table td:first-child { text-align: left; white-space: normal; }
+  .cost-table tr:hover td { background: var(--canvas-subtle); }
+  .cost-table .num { font-variant-numeric: tabular-nums; }
+  .cost-table .pos { color: var(--success-fg); }
+  .cost-table .neg { color: var(--danger-fg); }
+  .cost-table .muted { color: var(--fg-muted); font-size: 12px; }
+  .table-wrap { max-height: 520px; overflow: auto; border: 1px solid var(--border-default); border-radius: 8px; background: var(--canvas-default); }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border-default); background: var(--canvas-subtle); color: var(--fg-muted); }
+  .badge.warn { background: var(--attention-subtle); border-color: var(--attention-emphasis); color: var(--attention-fg); }
+  .profile-grid { display: grid; grid-template-columns: minmax(200px, 1.2fr) 1fr 1fr; gap: 10px 16px; align-items: center; padding: 12px 0; }
+  .profile-grid > .head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-muted); font-weight: 600; }
+  .profile-grid select { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-default); background: var(--canvas-default); color: var(--fg-default); font-size: 13px; }
+  .profile-grid .feat { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: var(--fg-default); }
+  .profile-grid .meta { font-size: 12px; color: var(--fg-muted); }
+  .stat-card.win .value { color: var(--success-fg); }
+  .stat-card.loss .value { color: var(--danger-fg); }
+  .no-data { padding: 60px 20px; text-align: center; color: var(--fg-muted); }
+  .no-data h2 { color: var(--fg-default); margin-bottom: 8px; }
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }
+  .pill-row .pill { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: var(--canvas-subtle); border: 1px solid var(--border-default); color: var(--fg-muted); }
+  .pill-row .pill strong { color: var(--fg-default); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.7 7.7 0 018 4.6c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>PRU vs Token Cost</span>
+    </div>
+    <nav class="nav-links">
+      <a href="index.html">← Pricing data story</a>
+      <a href="usage.html">Your usage</a>
+      <a href="#summary">Summary</a>
+      <a href="#by-model">By model</a>
+      <a href="#by-feature">By workflow</a>
+      <a href="#daily">Daily</a>
+      <a href="#provider">By provider</a>
+      <a href="#assumptions">Assumptions</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <span class="eyebrow">Your usage · cost comparison</span>
+  <h1>What you <span class="accent">paid in PRU</span> vs what those interactions <span class="accent">would cost in tokens</span>.</h1>
+  <p class="lede">
+    Every <code>user_initiated_interaction_count</code> in your export is one Copilot
+    request, billed in <strong>Premium Request Units</strong> at the model's PRU multiplier
+    × $0.04. The same interaction also burns <strong>tokens</strong> — a quantity that
+    never appears in your bill but is exactly what you'd pay if you called the model's
+    provider API directly. This page reconciles the two, model by model, workflow by
+    workflow, day by day, using <em>your</em> data and the published token rates.
+  </p>
+</div>
+
+<!-- ============== NO DATA STATE ============== -->
+<section id="no-data" class="no-border" hidden>
+  <div class="no-data">
+    <h2>No usage data loaded yet</h2>
+    <p>This page reads from a usage export you've already uploaded. Head to the upload page first.</p>
+    <p style="margin-top: 24px;">
+      <a href="usage.html" class="btn-primer-primary">Upload your export →</a>
+    </p>
+  </div>
+</section>
+
+<div id="results" hidden>
+
+<!-- ============== 1. SUMMARY ============== -->
+<section id="summary" class="no-border">
+  <h2><span class="num">1</span>Headline cost reconciliation</h2>
+  <p class="section-lede" id="summary-lede">
+    For every chat / agent / CLI interaction in your file we look up the model's PRU
+    multiplier and its provider list-price token rate, multiply by the assumed token
+    profile for the workflow it ran in, and total it. PRU charges are exact. Token cost
+    is a directional estimate — adjust the workflow profile assumptions below to refine.
+  </p>
+  <div class="hero-stats">
+    <div class="stat-card"><div class="label">Billable interactions</div><div class="value" id="kpi-int">—</div><div class="sub" id="kpi-int-sub">prompts that consumed PRU or tokens</div></div>
+    <div class="stat-card"><div class="label">PRU charged</div><div class="value" id="kpi-pru">—</div><div class="sub" id="kpi-pru-sub">— premium requests · @ $0.04 each</div></div>
+    <div class="stat-card"><div class="label">PRU cost (today's bill)</div><div class="value" id="kpi-pru-cost">—</div><div class="sub">at $0.04 / PRU overage rate</div></div>
+    <div class="stat-card"><div class="label">Estimated token cost</div><div class="value" id="kpi-tok-cost">—</div><div class="sub">at provider list price · same interactions</div></div>
+    <div class="stat-card" id="kpi-delta-card"><div class="label">PRU − Tokens</div><div class="value" id="kpi-delta">—</div><div class="sub" id="kpi-delta-sub">positive = PRU costs more · negative = PRU subsidises you</div></div>
+    <div class="stat-card"><div class="label">If billed by direct API</div><div class="value" id="kpi-direct">—</div><div class="sub" id="kpi-direct-sub">what the provider would charge you directly</div></div>
+  </div>
+  <div class="callout" id="summary-callout">
+    <strong id="summary-callout-title">Loading…</strong>
+    <span id="summary-callout-body"></span>
+  </div>
+</section>
+
+<!-- ============== 2. WORKFLOW ASSUMPTIONS ============== -->
+<section id="assumptions">
+  <h2><span class="num">2</span>Workflow token assumptions</h2>
+  <p class="section-lede">
+    Token cost depends entirely on how big each prompt is. The Copilot export tells us
+    <em>which feature</em> ran every interaction (chat, agent mode, plan mode, CLI…) but
+    not how many tokens each one used. Pick a token profile for each feature found in
+    your file. Defaults follow the analysis: chat = 4K in / 2K out, agent mode = 60K /
+    15K, CLI = 100K / 25K. Changes recompute every chart and KPI on this page in real time.
+  </p>
+  <div class="chart-card">
+    <div class="profile-grid" id="profile-grid">
+      <div class="head">Feature in your file</div>
+      <div class="head">Token profile (in / out)</div>
+      <div class="head">Interactions seen</div>
+    </div>
+    <div class="pill-row">
+      <span class="pill">Total assumed input tokens · <strong id="pill-in">—</strong></span>
+      <span class="pill">Total assumed output tokens · <strong id="pill-out">—</strong></span>
+      <span class="pill">CLI tokens (measured exactly) · <strong id="pill-cli">—</strong></span>
+    </div>
+    <div class="source-line">
+      Profiles are sourced from <a href="analysis/model-comparison.md#token-economics-mode-by-mode">analysis/model-comparison.md</a>.
+      CLI rows use the actual token counts your export already includes — no estimation needed.
+    </div>
+  </div>
+</section>
+
+<!-- ============== 3. PER MODEL ============== -->
+<section id="by-model">
+  <h2><span class="num">3</span>Cost per model — PRU vs token</h2>
+  <p class="section-lede">
+    Each row is a model that appears in your <code>totals_by_model_feature</code>. PRU
+    cost is the multiplier × interactions × $0.04. Token cost uses the workflow profiles
+    above and the model's list-price input/output rates. Sorted by total interactions.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">PRU charge vs estimated token cost (top 12 models)</div>
+    <div class="chart-sub">Blue = what you paid in PRU · Orange = what those interactions would cost at provider list price.</div>
+    <div id="chart-models"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>PRU cost ($)</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--p-anthropic)"></span>Token cost ($)</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Full per-model breakdown</div>
+    <div class="chart-sub">Negative delta = PRU subsidises you (token cost > PRU). Positive = PRU charges more than tokens.</div>
+    <div class="table-wrap">
+      <table class="cost-table" id="model-table">
+        <thead><tr>
+          <th>Model</th><th>Provider</th><th>Mult</th><th>Tier</th>
+          <th>Interactions</th><th>PRU charged</th><th>PRU $</th>
+          <th>Est. tokens (M)</th><th>Token $</th><th>Δ (PRU − Tok)</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============== 4. PER FEATURE ============== -->
+<section id="by-feature">
+  <h2><span class="num">4</span>Cost per workflow / feature</h2>
+  <p class="section-lede">
+    Same data, sliced by the Copilot feature instead of the model. Reveals where the
+    PRU↔token gap actually opens up: a chat-mode interaction looks fairly priced;
+    agent-mode and CLI start to subsidise heavily on premium models.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">PRU vs token cost by feature</div>
+    <div class="chart-sub">Hover for ratio. CLI uses your exact recorded token counts.</div>
+    <div id="chart-features"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>PRU cost ($)</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--p-anthropic)"></span>Token cost ($)</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============== 5. DAILY TREND ============== -->
+<section id="daily">
+  <h2><span class="num">5</span>Daily cost — the two universes side by side</h2>
+  <p class="section-lede">
+    Two stacked area charts on the same x-axis. Top: what you actually got billed in PRU
+    each day. Bottom: what those exact same interactions would have cost in tokens. Same
+    days, same models, two pricing models.
+  </p>
+  <div class="chart-card">
+    <div class="chart-controls">
+      <div class="toggle-group" id="daily-toggle">
+        <button class="active" data-mode="overlay">Overlay (compare)</button>
+        <button data-mode="cumulative">Cumulative ($)</button>
+      </div>
+    </div>
+    <div class="chart-title">Daily PRU $ vs token $ across the export window</div>
+    <div class="chart-sub">Bars / lines per day for the full reporting period.</div>
+    <div id="chart-daily"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>PRU $</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--p-anthropic)"></span>Token $</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============== 6. BY PROVIDER ============== -->
+<section id="provider">
+  <h2><span class="num">6</span>If you switched to direct API access today</h2>
+  <p class="section-lede">
+    Where would your token spend actually go? This section assumes you skipped Copilot
+    entirely and called every model's provider API directly at <em>list price</em>. It is
+    upper-bound — real direct-API customers negotiate rates and Anthropic / OpenAI both
+    offer prompt caching that knocks ~30–50% off input cost on agent workflows. Use it as
+    "the worst case if you went DIY".
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Estimated direct-provider spend for the report window</div>
+    <div class="chart-sub">Donut by provider · totals with input/output split below. Compared head-to-head with what you actually paid Copilot.</div>
+    <div id="chart-provider"></div>
+  </div>
+  <div class="chart-card">
+    <div class="table-wrap">
+      <table class="cost-table" id="provider-table">
+        <thead><tr>
+          <th>Provider</th>
+          <th>Models you used</th>
+          <th>Interactions</th>
+          <th>Input tokens</th>
+          <th>Output tokens</th>
+          <th>Input $</th>
+          <th>Output $</th>
+          <th>Total direct $</th>
+          <th>vs PRU paid</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============== 7. RECOMMENDATIONS ============== -->
+<section id="reco">
+  <h2><span class="num">7</span>What this means for you</h2>
+  <p class="section-lede">A short read of the data above — generated from your numbers, not generic advice.</p>
+  <div id="reco-list"></div>
+</section>
+
+</div><!-- /#results -->
+
+<footer>
+  <div>
+    Built with <a href="https://d3js.org">D3.js</a> · Styled with <a href="https://primer.style">GitHub Primer</a> tokens ·
+    Token rates from <a href="analysis/model-comparison.md">analysis/model-comparison.md</a> ·
+    Parsed entirely in your browser
+  </div>
+  <div class="links">
+    <a href="index.html">Pricing data story</a> ·
+    <a href="usage.html">Your usage</a> ·
+    <a href="https://github.com/Bens-Scratch-Org/Supreme-Model-Picker">Source</a>
+  </div>
+</footer>
+
+<div class="d3-tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="data.js"></script>
+<script src="cost-analysis.js"></script>
+</body>
+</html>
