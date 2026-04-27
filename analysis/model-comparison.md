@@ -564,6 +564,11 @@ The original analysis only modeled the first two rows. **For every row below the
 
 #### The Hidden Subsidy Structure
 
+> [!IMPORTANT]
+> **All "subsidy" figures in this document use provider *list price* as the cost benchmark.** GitHub's actual cost-to-serve is materially lower because of negotiated commit rates (Microsoft↔OpenAI revenue-share, Anthropic and Google volume agreements), Azure-hosted inference for the OpenAI tier, and provider-side prompt caching / batch discounts. The *relative ordering* of subsidies across tiers is preserved, but the *absolute* GitHub→user transfer is smaller than the tables imply — particularly for the Included tier, where the per-seat fee on a paid plan likely covers the negotiated inference cost with margin to spare. Read the numbers below as a *user-perceived* subsidy (i.e., savings vs. going direct to the provider API at list price), not a P&L subsidy on GitHub's books.
+>
+> **Multiplier↔cost correlation:** Pearson r ≈ 0.80 between PRU multiplier and blended token chat cost across the 13 model rows in this analysis (≈ 0.79 at agent-mode sizes). The correlation is real but loose — only ~64% of multiplier variance is explained by token cost, leaving substantial room for the strategic and promotional factors discussed below. Crucially, **the multiplier is not monotonic in token cost**: the 1.25× tier spans $0.040–$0.070 of list-price chat cost (a 75% range under one multiplier), and the 7.5× tier has the *same* $0.070 list cost as the 1.25× Opus tier despite charging 6× more. The 1.25× → 7.5× jump is therefore **not** justified by raw input/output rates; it reflects (a) reasoning / adaptive-thinking output volume that inflates *realised* output tokens, (b) promotional pricing during launch (Opus 4.7's 7.5× rate expires April 30, 2026), and (c) deliberate cross-subsidy of the free tier and agentic workflows.
+
 The PRU multiplier system creates an internal subsidy structure:
 
 ```

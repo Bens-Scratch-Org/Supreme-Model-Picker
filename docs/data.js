@@ -53,8 +53,8 @@ window.TIER_RATIONALE = [
     tokenChatHi: 0.030,
     examples: ["GPT-5 mini", "GPT-4.1", "GPT-4o"],
     color: "#8250df",
-    rationale: "Loss-leader. Bundled to keep the base experience attractive enough to drive paid-plan signups. The $0.005–$0.03/chat token cost is paid by GitHub.",
-    fairness: "100% subsidy from GitHub to user.",
+    rationale: "Zero marginal cost per chat — bundled into the seat fee, which more than covers negotiated provider rates at typical usage. The $0.005–$0.03/chat figure is provider list price, not GitHub's actual cost-to-serve.",
+    fairness: "Zero-marginal-cost bundle. User-perceived subsidy at list price; on GitHub's books the seat fee covers negotiated inference costs.",
   },
   {
     tier: "Budget Premium",
