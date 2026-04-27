@@ -142,8 +142,19 @@
       renderReco();
     });
   });
-  // Wire up pooled-allowance fit controls
-  ['fit-plan', 'fit-seats', 'fit-period'].forEach(id => {
+  // Default seat count from the upload's distinct-user count
+  const uploadedUsers = (DATA && DATA.meta && DATA.meta.users) || 0;
+  if (uploadedUsers > 0) {
+    const sl = document.getElementById('fit-seats');
+    if (sl) {
+      // Snap to slider step (5) and ensure the slider's max can hold the value
+      const v = Math.max(5, Math.round(uploadedUsers / 5) * 5);
+      if (v > +sl.max) sl.max = String(Math.ceil(v * 1.5));
+      sl.value = String(v);
+    }
+  }
+  // Wire up pooled-allowance fit controls (Business/Enterprise mix)
+  ['fit-seats', 'fit-mix', 'fit-period'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', renderPoolFit);
   });
@@ -394,27 +405,54 @@
     $('summary-callout-body').innerHTML = body;
   }
 
-  // ----- Pooled allowance fit (Business / Enterprise) --------------------
+  // ----- Pooled allowance fit (Business / Enterprise mix) ----------------
   function renderPoolFit() {
     const r = CACHE;
-    const planSel = $('fit-plan');
     const seatsEl = $('fit-seats');
     const seatsV  = $('fit-seats-val');
+    const mixEl   = $('fit-mix');
+    const mixLbl  = $('fit-mix-label');
     const period  = $('fit-period');
     const bar     = $('fit-bar');
-    if (!planSel || !window.AI_CREDITS) return;
-    const plan = window.AI_CREDITS.plans.find(p => p.id === planSel.value);
-    if (!plan) return;
+    if (!seatsEl || !window.AI_CREDITS) return;
+    const biz = window.AI_CREDITS.plans.find(p => p.id === 'business');
+    const ent = window.AI_CREDITS.plans.find(p => p.id === 'enterprise');
+    if (!biz || !ent) return;
+
     const isPromo = period.value === 'promo';
-    const perSeat = (isPromo && plan.promoCredits) ? plan.promoCredits : plan.credits;
+    const bizPerSeat = (isPromo && biz.promoCredits) ? biz.promoCredits : biz.credits;
+    const entPerSeat = (isPromo && ent.promoCredits) ? ent.promoCredits : ent.credits;
+
     const seats = +seatsEl.value;
+    const bizPct = +mixEl.value; // 0..100
+    const bizSeats = Math.round(seats * bizPct / 100);
+    const entSeats = seats - bizSeats;
+
     seatsV.textContent = fmtInt(seats);
-    const pool = seats * perSeat;
-    const need = Math.round(r.totalTokenCost / CREDIT_RATE); // credits this month
+    mixLbl.textContent = `${bizPct}% Business / ${100 - bizPct}% Enterprise`;
+
+    const bizPoolC = bizSeats * bizPerSeat;
+    const entPoolC = entSeats * entPerSeat;
+    const pool = bizPoolC + entPoolC;
+    const subsCost = bizSeats * biz.price + entSeats * ent.price;
+    const need = Math.round(r.totalTokenCost / CREDIT_RATE);
 
     $('fit-pool').textContent = fmtInt(pool) + 'c';
     $('fit-pool-dollar').textContent = '$' + fmtInt(Math.round(pool / 100)) + '/mo';
-    $('fit-perseat').textContent = fmtInt(perSeat) + 'c' + (isPromo ? ' (promo)' : '');
+    $('fit-subs').textContent = '$' + fmtInt(subsCost) + '/mo';
+    $('fit-biz').textContent = fmtInt(bizSeats) + ' seats · $' + fmtInt(bizSeats * biz.price);
+    $('fit-ent').textContent = fmtInt(entSeats) + ' seats · $' + fmtInt(entSeats * ent.price);
+    $('fit-biz-c').textContent = fmtInt(bizPoolC) + 'c · ' + fmtInt(bizPerSeat) + '/seat' + (isPromo ? ' (promo)' : '');
+    $('fit-ent-c').textContent = fmtInt(entPoolC) + 'c · ' + fmtInt(entPerSeat) + '/seat' + (isPromo ? ' (promo)' : '');
+
+    // Hint about default seats coming from upload
+    const uploadedUsers = (DATA && DATA.meta && DATA.meta.users) || 0;
+    const hint = $('fit-seats-hint');
+    if (hint) {
+      hint.textContent = uploadedUsers > 0
+        ? `Default = ${fmtInt(uploadedUsers)} distinct users in your upload. Drag to model a larger or smaller fleet.`
+        : 'Slide to model your fleet size.';
+    }
 
     const axisMax = Math.max(pool, need) * 1.05 || 1;
     const pct = v => (100 * v / axisMax).toFixed(2) + '%';
@@ -439,23 +477,44 @@
     $('fit-title').textContent = overage > 0
       ? `Your month exceeds the pool by ${fmtInt(overage)} credits ($${fmtInt(Math.round(overage/100))})`
       : `Your month fits inside the pool with ${fmtInt(headroom)} credits ($${fmtInt(Math.round(headroom/100))}) headroom`;
-    $('fit-sub').textContent = `Projection assumes everyone in your ${seats}-seat fleet runs the same workload mix as the file you uploaded.`;
+    const mixLabel = bizSeats === 0 ? 'all-Enterprise'
+                  : entSeats === 0 ? 'all-Business'
+                  : `${bizPct}/${100-bizPct} Business/Enterprise`;
+    $('fit-sub').textContent = `Projection assumes everyone in your ${fmtInt(seats)}-seat (${mixLabel}) fleet runs the same workload mix as the file you uploaded. Subscription cost: $${fmtInt(subsCost)}/mo.`;
 
     let summaryHTML = `
       <div style="display:flex;flex-wrap:wrap;gap:18px">
         <span class="pool-stat"><span>Need</span><strong>${fmtInt(need)}c · $${fmtInt(Math.round(need/100))}</strong></span>
         <span class="pool-stat"><span>Pool</span><strong>${fmtInt(pool)}c · $${fmtInt(Math.round(pool/100))}</strong></span>
+        <span class="pool-stat"><span>Total Copilot bill</span><strong>$${fmtInt(subsCost + Math.round(overage/100))}/mo</strong></span>
         <span class="pool-stat"><span>Verdict</span><strong style="color:var(--${overage>0?'danger':'success'}-fg)">${overage > 0 ? 'Overage of $'+fmtInt(Math.round(overage/100)) : 'Headroom of $'+fmtInt(Math.round(headroom/100))}</strong></span>
       </div>
     `;
+
     if (overage > 0) {
-      // seats needed to absorb
-      const seatsNeeded = Math.ceil(need / perSeat);
-      summaryHTML += `<p style="margin-top:14px;font-size:13px;color:var(--fg-muted)">To absorb this month entirely inside the pool you would need <strong style="color:var(--fg-default)">${fmtInt(seatsNeeded)}</strong> seats at the current per-seat allowance, or you can set an overage budget of at least <strong style="color:var(--fg-default)">$${fmtInt(Math.round(overage/100))}/mo</strong>.</p>`;
+      // What blended per-seat allowance is needed?
+      const bizExtraNeeded = Math.ceil(overage / bizPerSeat);
+      const entExtraNeeded = Math.ceil(overage / entPerSeat);
+      summaryHTML += `<p style="margin-top:14px;font-size:13px;color:var(--fg-muted)">
+        To absorb this month entirely inside the pool you'd need to either add roughly
+        <strong style="color:var(--fg-default)">${fmtInt(bizExtraNeeded)}</strong> more
+        Business seats <em>or</em> <strong style="color:var(--fg-default)">${fmtInt(entExtraNeeded)}</strong>
+        more Enterprise seats — or set an overage budget of at least
+        <strong style="color:var(--fg-default)">$${fmtInt(Math.round(overage/100))}/mo</strong>.
+        Try moving the plan-mix slider toward Enterprise (3,900 c/seat standard, 7,000 c/seat during promo)
+        before adding seats.
+      </p>`;
     } else {
-      // how many extra seats of consumption could fit
-      const headroomSeats = Math.floor(headroom / perSeat);
-      summaryHTML += `<p style="margin-top:14px;font-size:13px;color:var(--fg-muted)">The pool has room for roughly <strong style="color:var(--fg-default)">${fmtInt(headroomSeats)}</strong> more seats of equivalent usage before any overage is billed. Without pooling, an individual seat exceeding ${fmtInt(perSeat)} credits would have been blocked or billed for overage on its own.</p>`;
+      // Compute average headroom per seat in either currency
+      const headroomBizSeats = Math.floor(headroom / bizPerSeat);
+      const headroomEntSeats = Math.floor(headroom / entPerSeat);
+      summaryHTML += `<p style="margin-top:14px;font-size:13px;color:var(--fg-muted)">
+        The pool has room for roughly <strong style="color:var(--fg-default)">${fmtInt(headroomBizSeats)}</strong>
+        more Business-equivalent seats, or <strong style="color:var(--fg-default)">${fmtInt(headroomEntSeats)}</strong>
+        more Enterprise-equivalent seats of identical usage before any overage is billed. Without pooling,
+        any individual seat exceeding its allowance (Business ${fmtInt(bizPerSeat)}c · Enterprise
+        ${fmtInt(entPerSeat)}c) would be blocked or billed for overage on its own.
+      </p>`;
     }
     $('fit-summary').innerHTML = summaryHTML;
   }
