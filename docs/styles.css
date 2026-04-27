@@ -523,6 +523,39 @@ svg .grid path { display: none; }
   border-color: var(--fg-subtle);
 }
 
+/* CTA card (data-story → upload page handoff) */
+.cta-card {
+  background: linear-gradient(135deg, var(--accent-subtle), var(--done-subtle));
+  border: 1px solid var(--accent-emphasis);
+  border-radius: 12px;
+  padding: 32px 28px;
+  text-align: center;
+}
+.cta-card .cta-content {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.cta-card .eyebrow {
+  display: inline-block;
+  font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--accent-fg);
+  background: var(--canvas-default);
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--border-default);
+}
+.cta-card .btn-primer-primary {
+  background-color: var(--accent-emphasis);
+  font-size: 15px;
+  padding: 10px 20px;
+}
+.cta-card .btn-primer-primary:hover:not(:disabled) {
+  background-color: #0860c4;
+}
+@media print {
+  #analyse-your-data { display: none !important; }
+}
+
 /* Source attribution */
 .source-line {
   font-size: 11px;
