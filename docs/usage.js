@@ -55,6 +55,9 @@
     resetBtn.hidden = true;
     parseError.hidden = true;
     results.hidden = true;
+    try { sessionStorage.removeItem('copilotUsageData'); } catch (e) { /* ignore */ }
+    const link = $('cost-analysis-link');
+    if (link) link.hidden = true;
   });
 
   function handleFile(file) {
@@ -145,6 +148,8 @@
       byLanguage: new Map(),  // lang -> {gens, locAdded, locSuggested}
       byIde: new Map(),       // ide -> interactions
       byUser: new Map(),      // login -> {interactions, generations, acceptances, days}
+      modelFeatureCells: [],  // raw [{model, feature, interactions, generations}] for cost-analysis page
+      cliInteractionsTotal: 0,
       cli: {
         users: new Set(),
         sessions: 0,
@@ -204,10 +209,13 @@
 
       if (Array.isArray(r.totals_by_model_feature)) {
         for (const m of r.totals_by_model_feature) {
-          bumpMap(a.byModel, m.model, {
-            interactions: m.user_initiated_interaction_count || 0,
-            generations: m.code_generation_activity_count || 0,
+          const ints = m.user_initiated_interaction_count || 0;
+          const gens = m.code_generation_activity_count || 0;
+          bumpMap(a.byModel, m.model, { interactions: ints, generations: gens });
+          a.modelFeatureCells.push({
+            model: m.model, feature: m.feature, interactions: ints, generations: gens,
           });
+          if (m.feature === 'copilot_cli') a.cliInteractionsTotal += ints;
         }
       }
 
@@ -263,6 +271,49 @@
     renderIde(a);
     renderUsers(a);
     renderCli(a);
+    stashForCostAnalysis(rows, a);
+  }
+
+  // Persist a compact aggregated payload so the cost-analysis page can read it
+  // without re-uploading. Maps and Sets are serialized to plain objects/arrays.
+  function stashForCostAnalysis(rows, a) {
+    const mapToObj = (m) => {
+      const o = {};
+      for (const [k, v] of m.entries()) o[k] = v;
+      return o;
+    };
+    const payload = {
+      meta: {
+        rowCount: rows.length,
+        users: a.users.size,
+        days: a.days.size,
+        reportStart: rows[0] && rows[0].report_start_day || null,
+        reportEnd: rows[0] && rows[0].report_end_day || null,
+        enterpriseId: rows[0] && rows[0].enterprise_id || null,
+        savedAt: new Date().toISOString(),
+      },
+      byDay: mapToObj(a.byDay),
+      byFeature: mapToObj(a.byFeature),
+      byModel: mapToObj(a.byModel),
+      modelFeatureCells: a.modelFeatureCells,
+      cliInteractionsTotal: a.cliInteractionsTotal,
+      cli: {
+        users: a.cli.users.size,
+        sessions: a.cli.sessions,
+        requests: a.cli.requests,
+        prompt: a.cli.prompt,
+        output: a.cli.output,
+        byDay: mapToObj(a.cli.byDay),
+      },
+    };
+    try {
+      sessionStorage.setItem('copilotUsageData', JSON.stringify(payload));
+      const link = $('cost-analysis-link');
+      if (link) link.hidden = false;
+    } catch (e) {
+      // Quota exceeded — page will still work, just no cross-page persistence.
+      console.warn('Could not stash usage data for cost analysis page:', e.message);
+    }
   }
 
   function renderOverview(rows, a) {
