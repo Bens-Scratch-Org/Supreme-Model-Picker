@@ -108,6 +108,7 @@
   let DATA = null;        // raw aggregated payload from usage.js
   let PROFILE = {};       // feature -> workflow id
   let CACHE = null;       // last computed reconciliation
+  let dailyMode = 'overlay'; // declared here to avoid TDZ — render() runs before the toggle handler block
 
   // ----- Boot ------------------------------------------------------------
   const raw = sessionStorage.getItem('copilotUsageData');
@@ -555,7 +556,6 @@
   }
 
   // ----- Daily comparison chart -----------------------------------------
-  let dailyMode = 'overlay';
   function renderDailyChart() {
     const data = [...CACHE.byDay.values()]
       .map(d => ({ ...d, date: new Date(d.day) }))
