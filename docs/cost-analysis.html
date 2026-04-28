@@ -37,6 +37,14 @@
 </head>
 <body>
 
+<div class="announce-bar" role="note">
+  <span class="pill">Update · April 27, 2026</span>
+  <span><strong>Copilot is moving to usage-based billing on June&nbsp;1, 2026.</strong>
+    PRUs become <strong>GitHub AI Credits</strong> (1 credit = $0.01) billed per token. Toggle "AI Credits view" below to see what your bill becomes — pooling included for Business/Enterprise.
+    <a href="https://github.blog/news-insights/company-news/github-copilot-is-moving-to-usage-based-billing/">Announcement</a>.
+  </span>
+</div>
+
 <header class="site-header">
   <div class="site-header-inner">
     <div class="brand">
@@ -91,12 +99,23 @@
     profile for the workflow it ran in, and total it. PRU charges are exact. Token cost
     is a directional estimate — adjust the workflow profile assumptions below to refine.
   </p>
+  <div class="chart-card" style="margin: 8px 0 16px;padding:14px 16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+    <strong style="font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--fg-muted)">Billing model</strong>
+    <div class="toggle-group" id="billing-toggle">
+      <button class="active" data-mode="pru">PRU (until May 31, 2026)</button>
+      <button data-mode="credits">AI Credits (from June 1, 2026)</button>
+    </div>
+    <span style="font-size:13px;color:var(--fg-muted)">
+      In AI Credits view, the "estimated token cost" column becomes your actual bill (1 credit = $0.01). Cached input pricing applies at provider rates.
+    </span>
+  </div>
   <div class="hero-stats">
     <div class="stat-card"><div class="label">Billable interactions</div><div class="value" id="kpi-int">—</div><div class="sub" id="kpi-int-sub">prompts that consumed PRU or tokens</div></div>
     <div class="stat-card"><div class="label">PRU charged</div><div class="value" id="kpi-pru">—</div><div class="sub" id="kpi-pru-sub">— premium requests · @ $0.04 each</div></div>
     <div class="stat-card"><div class="label">PRU cost (today's bill)</div><div class="value" id="kpi-pru-cost">—</div><div class="sub">at $0.04 / PRU overage rate</div></div>
-    <div class="stat-card"><div class="label">Estimated token cost</div><div class="value" id="kpi-tok-cost">—</div><div class="sub">at provider list price · same interactions</div></div>
-    <div class="stat-card" id="kpi-delta-card"><div class="label">PRU − Tokens</div><div class="value" id="kpi-delta">—</div><div class="sub" id="kpi-delta-sub">positive = PRU costs more · negative = PRU subsidises you</div></div>
+    <div class="stat-card"><div class="label" id="kpi-tok-label">Estimated token cost</div><div class="value" id="kpi-tok-cost">—</div><div class="sub" id="kpi-tok-sub">at provider list price · same interactions</div></div>
+    <div class="stat-card"><div class="label">AI Credits used</div><div class="value" id="kpi-credits">—</div><div class="sub">1 credit = $0.01 USD billed per token</div></div>
+    <div class="stat-card" id="kpi-delta-card"><div class="label">PRU − Credits</div><div class="value" id="kpi-delta">—</div><div class="sub" id="kpi-delta-sub">positive = PRU costs more · negative = AI Credits costs more</div></div>
     <div class="stat-card"><div class="label">If billed by direct API</div><div class="value" id="kpi-direct">—</div><div class="sub" id="kpi-direct-sub">what the provider would charge you directly</div></div>
   </div>
   <div class="callout" id="summary-callout">
@@ -245,9 +264,63 @@
   </div>
 </section>
 
-<!-- ============== 7. RECOMMENDATIONS ============== -->
+<!-- ============== 7. POOLED ALLOWANCE FIT (BUSINESS / ENTERPRISE) ============== -->
+<section id="pool-fit">
+  <h2><span class="num">7</span>Pooled allowance fit · Business &amp; Enterprise</h2>
+  <p class="section-lede">
+    On June 1, 2026 Copilot Business and Enterprise pool every seat's monthly AI Credits
+    allowance into one shared bucket. This panel projects your uploaded month's token
+    cost against that pool. <strong>Seat count defaults to the number of distinct active
+    users in your upload</strong>; orgs running a hybrid of Business and Enterprise can
+    rebalance the plan mix below — the pool size, subscription cost, and per-seat
+    averages update live. Pro / Pro+ are excluded — those plans are <em>not</em> pooled.
+  </p>
+  <div class="pool-controls">
+    <div class="field">
+      <label for="fit-seats">Total seats <span style="text-transform:none;color:var(--fg-subtle);font-weight:400">(<span id="fit-seats-val">100</span>)</span></label>
+      <input type="range" id="fit-seats" min="5" max="2000" step="5" value="100">
+      <span class="hint" id="fit-seats-hint" style="font-size:11px;color:var(--fg-muted)"></span>
+    </div>
+    <div class="field">
+      <label for="fit-mix">Plan mix · <span id="fit-mix-label" style="text-transform:none;color:var(--fg-default);font-weight:600">100% Business / 0% Enterprise</span></label>
+      <input type="range" id="fit-mix" min="0" max="100" step="1" value="100">
+      <span class="hint" style="font-size:11px;color:var(--fg-muted)">Drag left for more Enterprise seats. Larger orgs typically run a hybrid.</span>
+    </div>
+    <div class="field">
+      <label for="fit-period">Period</label>
+      <select id="fit-period">
+        <option value="promo" selected>Jun 1 – Sep 1, 2026 (introductory)</option>
+        <option value="standard">Sep 1, 2026 onward</option>
+      </select>
+    </div>
+    <div class="field" style="flex:1;min-width:240px">
+      <span class="pool-stat"><span>Pool</span><strong id="fit-pool">—</strong></span>
+      <span class="pool-stat"><span>Pool $</span><strong id="fit-pool-dollar">—</strong></span>
+      <span class="pool-stat"><span>Subs cost</span><strong id="fit-subs">—</strong></span>
+    </div>
+  </div>
+  <div class="chart-card" style="margin-top:8px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:18px;align-items:center">
+    <span class="pool-stat"><span>Business</span><strong id="fit-biz">—</strong></span>
+    <span class="pool-stat"><span>Enterprise</span><strong id="fit-ent">—</strong></span>
+    <span class="pool-stat"><span>Biz pool credits</span><strong id="fit-biz-c">—</strong></span>
+    <span class="pool-stat"><span>Ent pool credits</span><strong id="fit-ent-c">—</strong></span>
+  </div>
+  <div class="chart-card" style="margin-top:16px">
+    <div class="chart-title" id="fit-title">Your month vs. pooled allowance</div>
+    <div class="chart-sub" id="fit-sub">—</div>
+    <div class="pool-bar" id="fit-bar" style="margin-top:18px;height:36px"></div>
+    <div class="pool-legend">
+      <span><i style="background:var(--accent-emphasis)"></i>Your token cost (this month)</span>
+      <span><i style="background:var(--accent-subtle);border:1px dashed var(--accent-emphasis)"></i>Pool headroom</span>
+      <span><i style="background:repeating-linear-gradient(45deg,var(--danger-emphasis),var(--danger-emphasis) 4px,#fff 4px,#fff 8px)"></i>Overage (paid)</span>
+    </div>
+    <div id="fit-summary" style="margin-top:18px"></div>
+  </div>
+</section>
+
+<!-- ============== 8. RECOMMENDATIONS ============== -->
 <section id="reco">
-  <h2><span class="num">7</span>What this means for you</h2>
+  <h2><span class="num">8</span>What this means for you</h2>
   <p class="section-lede">A short read of the data above — generated from your numbers, not generic advice.</p>
   <div id="reco-list"></div>
 </section>
