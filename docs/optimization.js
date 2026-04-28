@@ -1075,7 +1075,7 @@
   //  WIRE UP CONTROLS
   // ======================================================================
   ['mix-seats','mix-period','mix-power-share','mix-power-mult'].forEach(id => {
-    const el = $(id); if (el) el.addEventListener('input', () => { renderPlanMix(); refreshScenario(); });
+    const el = $(id); if (el) el.addEventListener('input', () => { renderPlanMix(); refreshScenario(); renderBudget(); });
   });
   // Default seat slider to upload's user count
   const uploadedUsers = (DATA.meta && DATA.meta.users) || 0;
@@ -1090,6 +1090,305 @@
   });
 
   // ======================================================================
+  //  4. PER-USER QUOTAS & ENTERPRISE OVERAGE BUDGET
+  // ======================================================================
+  // Quantile helper over a numeric array (handles unsorted input).
+  function quantile(arr, q) {
+    if (!arr || !arr.length) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const pos = (sorted.length - 1) * q;
+    const lo = Math.floor(pos), hi = Math.ceil(pos);
+    if (lo === hi) return sorted[lo];
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  }
+
+  // Recommended-cap policy per persona (rationale + quantile + buffer).
+  const QUOTA_POLICY = {
+    power:   { label: 'Power',   color: 'var(--danger-emphasis)',    quant: 0.95, buffer: 1.15, rationale: 'Cap at <strong>P95 × 1.15</strong>. Keeps the top 5% productive on a normal month and only triggers on genuine runaway loops. These seats <em>must</em> sit on Enterprise to fit under cap without burning subs benefit.' },
+    regular: { label: 'Regular', color: 'var(--attention-emphasis)', quant: 0.95, buffer: 1.10, rationale: 'Cap at <strong>P95 × 1.10</strong>. Daily-active devs cluster tightly — a 10% buffer covers month-end pushes without leaving room for runaway agent loops.' },
+    light:   { label: 'Light',   color: 'var(--accent-emphasis)',    quant: 0.95, buffer: 1.20, rationale: 'Cap at <strong>P95 × 1.20</strong>. Light users have lumpy adoption; a generous buffer prevents friction when someone graduates to regular use.' },
+    dormant: { label: 'Dormant', color: 'var(--fg-muted)',           quant: 0.90, buffer: 1.50, rationale: 'Hard cap at the <strong>per-seat Business allowance</strong>. Dormant seats should never need more — and the cap protects against credential reuse / rogue agents on idle accounts.' },
+  };
+
+  function buildQuotaModel() {
+    const monthScale = 30 / ((DATA.meta && DATA.meta.days) || 28);
+    const out = {};
+    for (const p of PERSONAS) {
+      const policy = QUOTA_POLICY[p.id];
+      const monthlyCredits = (p.users || []).map(u => (u.credits || 0) * monthScale);
+      const p50 = quantile(monthlyCredits, 0.50);
+      const p90 = quantile(monthlyCredits, 0.90);
+      const p95 = quantile(monthlyCredits, 0.95);
+      const max = monthlyCredits.length ? d3.max(monthlyCredits) : 0;
+      const mean = monthlyCredits.length ? d3.mean(monthlyCredits) : 0;
+      let recommendedCap = Math.ceil((p95 * policy.buffer) / 50) * 50; // round to nearest 50 credits
+      // Floor for dormant — Business per-seat allowance.
+      if (p.id === 'dormant') recommendedCap = 1900;
+      // Floor for light — at least the Business allowance, otherwise the cap is below the entitlement.
+      if (p.id === 'light' && recommendedCap < 1900) recommendedCap = 1900;
+      out[p.id] = {
+        persona: p, policy,
+        p50, p90, p95, max, mean,
+        recommendedCap,
+        seats: p.count,
+        cappedPoolDemand: recommendedCap * p.count, // worst-case if every seat hit cap
+      };
+    }
+    return out;
+  }
+  let QUOTAS = buildQuotaModel();
+
+  function renderQuotaCards() {
+    const grid = $('quota-cards'); if (!grid) return;
+    grid.innerHTML = '';
+    for (const p of PERSONAS) {
+      const q = QUOTAS[p.id];
+      const card = document.createElement('div');
+      card.className = 'quota-card';
+      card.innerHTML = `
+        <div class="top-bar" style="background:${q.policy.color}"></div>
+        <h4>${q.policy.label} users</h4>
+        <div class="meta">${fmtInt(q.seats)} seats · P95 of monthly credits = ${fmtInt(Math.round(q.p95))}c</div>
+        <div class="v">${fmtInt(q.recommendedCap)}<span style="font-size:13px;color:var(--fg-muted);font-weight:500"> c/mo cap</span></div>
+        <div class="sub">≈ ${fmtMoney(q.recommendedCap * CREDIT_RATE)} per seat at current rates</div>
+        <div class="pcts">
+          <div>P50<strong>${fmtInt(Math.round(q.p50))}c</strong></div>
+          <div>P90<strong>${fmtInt(Math.round(q.p90))}c</strong></div>
+          <div>P95<strong>${fmtInt(Math.round(q.p95))}c</strong></div>
+        </div>
+        <div class="desc">${q.policy.rationale}</div>
+      `;
+      grid.appendChild(card);
+    }
+  }
+
+  function renderQuotaDistribution() {
+    const W = 1100, H = 320;
+    const margin = { top: 16, right: 24, bottom: 36, left: 70 };
+    const w = W - margin.left - margin.right;
+    const h = H - margin.top - margin.bottom;
+    const c = d3.select('#chart-quota-distribution').html('');
+    if (!c.node()) return;
+    const svg = c.append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    // Flatten users with persona id, sorted descending by monthly credits.
+    const monthScale = 30 / ((DATA.meta && DATA.meta.days) || 28);
+    const all = [];
+    for (const p of PERSONAS) {
+      for (const u of (p.users || [])) {
+        all.push({ persona: p.id, color: QUOTA_POLICY[p.id].color, credits: (u.credits || 0) * monthScale });
+      }
+    }
+    all.sort((a, b) => b.credits - a.credits);
+    if (!all.length) {
+      g.append('text').attr('x', w / 2).attr('y', h / 2).attr('text-anchor', 'middle')
+        .attr('fill', 'var(--fg-muted)').text('No per-user data available.');
+      return;
+    }
+
+    const x = d3.scaleBand().domain(all.map((_, i) => i)).range([0, w]).padding(0.1);
+    const yMax = d3.max(all, d => d.credits) * 1.1 || 1;
+    // Use linear scale (log doesn't help with cap-line readability).
+    const y = d3.scaleLinear().domain([0, yMax]).range([h, 0]);
+    g.append('g').attr('class', 'grid').call(d3.axisLeft(y).ticks(6).tickSize(-w).tickFormat(''));
+    g.append('g').attr('class', 'axis').attr('transform', `translate(0,${h})`)
+      .call(d3.axisBottom(x).tickValues(x.domain().filter((_, i) => i % 20 === 0)).tickFormat(d => d));
+    g.append('g').attr('class', 'axis').call(d3.axisLeft(y).ticks(6).tickFormat(d => fmtCompact(d) + 'c'));
+    g.append('text').attr('class','axis-label').attr('x', w/2).attr('y', h+28).attr('text-anchor','middle').text('Seat rank (descending)');
+
+    g.selectAll('rect.bar').data(all).enter().append('rect').attr('class','bar')
+      .attr('x', (d,i) => x(i)).attr('y', d => y(d.credits))
+      .attr('width', x.bandwidth()).attr('height', d => h - y(d.credits))
+      .attr('fill', d => d.color).attr('opacity', 0.85);
+
+    // Cap lines per persona
+    for (const id of ['power','regular','light','dormant']) {
+      const cap = QUOTAS[id].recommendedCap;
+      if (!cap || cap > yMax) continue;
+      g.append('line').attr('x1', 0).attr('x2', w).attr('y1', y(cap)).attr('y2', y(cap))
+        .attr('stroke', QUOTA_POLICY[id].color).attr('stroke-width', 1.5).attr('stroke-dasharray', '5,3');
+      g.append('text').attr('x', w - 4).attr('y', y(cap) - 4)
+        .attr('text-anchor', 'end').attr('font-size', 11).attr('fill', QUOTA_POLICY[id].color).attr('font-weight', 600)
+        .text(`${QUOTA_POLICY[id].label} cap · ${fmtInt(cap)}c`);
+    }
+
+    // Worst-case pool demand label (bottom-right)
+    const worstCase = Object.values(QUOTAS).reduce((s, q) => s + q.cappedPoolDemand, 0);
+    const monthlyNeed = BASELINE.totalCredits * monthScale;
+    const headroomPct = monthlyNeed ? (1 - monthlyNeed / Math.max(1, worstCase)) * 100 : 0;
+    g.append('text').attr('x', w - 4).attr('y', 12)
+      .attr('text-anchor','end').attr('font-size', 11).attr('fill','var(--fg-muted)')
+      .text(`Worst-case pool demand at caps = ${fmtCompact(worstCase)}c (vs ${fmtCompact(monthlyNeed)}c at trend → ${headroomPct.toFixed(0)}% headroom)`);
+  }
+
+  // ----- Enterprise overage budget recommender ---------------------------
+  // Models monthly token consumption as need × M, where M is log-normal with
+  // µ chosen so E[M] = 1 and σ matches user-supplied volatility. The budget
+  // ceiling B (credits) caps overage at min(B, max(0, need×M − pool)).
+  // Returns: prob(hit), expected paid overage, expected blocked credits.
+  function budgetSimulate(need, pool, sigma, budgetCredits) {
+    // Discretise log-normal multiplier into 401 quantiles for stable expectations.
+    const N = 401;
+    const mu = -0.5 * sigma * sigma; // ensures E[M]=1
+    let pHit = 0, ePaid = 0, eBlocked = 0;
+    for (let i = 0; i < N; i++) {
+      const u = (i + 0.5) / N;
+      // Inverse normal via Beasley-Springer-Moro approx (good enough)
+      const z = inverseNormal(u);
+      const m = Math.exp(mu + sigma * z);
+      const realisedNeed = need * m;
+      const overage = Math.max(0, realisedNeed - pool);
+      const paid = Math.min(overage, budgetCredits);
+      const blocked = overage - paid;
+      ePaid += paid / N;
+      eBlocked += blocked / N;
+      if (overage > budgetCredits) pHit += 1 / N;
+    }
+    return { pHit, ePaid, eBlocked };
+  }
+  // Acklam-style inverse normal (truncated; accurate enough for our risk math).
+  function inverseNormal(p) {
+    const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+    const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+    const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+    const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+    const pl = 0.02425, ph = 1 - pl;
+    let q, r;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+    if (p <= ph) { q = p - 0.5; r = q*q; return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1); }
+    q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+  }
+
+  function getBudgetInputs() {
+    return {
+      target: (+$('bud-target').value) / 100,
+      sigma:  (+$('bud-vol').value) / 100,
+      quotasOn: $('bud-quotas-on').value === 'on',
+    };
+  }
+
+  function renderBudget() {
+    const s = getBudgetInputs();
+    $('bud-target-val').textContent = Math.round(s.target * 100);
+    $('bud-vol-val').textContent = Math.round(s.sigma * 100);
+
+    const monthScale = 30 / ((DATA.meta && DATA.meta.days) || 28);
+    const baseNeed = BASELINE.totalCredits * monthScale;
+    // If quotas active, projected need is min(need, sum of capped pools by class).
+    const cappedNeed = Object.values(QUOTAS).reduce((sum, q) => {
+      // For each persona, capped monthly credits = sum(min(user_credits, cap))
+      const cap = q.recommendedCap;
+      return sum + (q.persona.users || []).reduce((s2, u) => s2 + Math.min((u.credits || 0) * monthScale, cap), 0);
+    }, 0);
+    const need = s.quotasOn ? cappedNeed : baseNeed;
+
+    // Pool size from the plan-mix optimum we already computed.
+    const opt = LAST_OPT;
+    const pool = opt ? opt.pool : 0;
+    const subsCost = opt ? opt.subs : 0;
+    const projectedOverage = Math.max(0, need - pool);
+
+    // Sweep budget multipliers from 0× to 3× of projected overage.
+    const series = [];
+    const span = Math.max(1, projectedOverage);
+    for (let mult = 0; mult <= 3.0001; mult += 0.05) {
+      const B = span * mult;
+      const r = budgetSimulate(need, pool, s.sigma, B);
+      series.push({ mult, budgetCredits: B, budgetDollars: B * CREDIT_RATE, ...r });
+    }
+    // Recommendation: smallest budget where pHit ≤ target.
+    const reco = series.find(d => d.pHit <= s.target) || series[series.length - 1];
+    const uncapped = series[series.length - 1]; // ~3× treats as "no cap"
+
+    // KPI cards
+    $('bud-pool').textContent = fmtCompact(pool) + 'c';
+    $('bud-pool-sub').textContent = `${opt ? `${opt.bizPct}% Business / ${100 - opt.bizPct}% Enterprise` : '—'} (section 3)`;
+    $('bud-need').textContent = fmtCompact(need) + 'c';
+    $('bud-need-sub').textContent = s.quotasOn
+      ? `${fmtMoneyShort(need * CREDIT_RATE)}/mo · per-user caps active`
+      : `${fmtMoneyShort(need * CREDIT_RATE)}/mo · uncapped`;
+    $('bud-reco').textContent = fmtMoneyShort(reco.budgetDollars);
+    $('bud-reco-sub').textContent = `expected spend ${fmtMoneyShort(reco.ePaid * CREDIT_RATE)}/mo · ${(reco.pHit*100).toFixed(1)}% cap-hit risk`;
+    // Worst-case (P99) month: capped = subs + budget (hard ceiling); uncapped = subs + P99(overage)
+    const z99 = 2.326; // ~P99
+    const p99Need = need * Math.exp(-0.5 * s.sigma * s.sigma + s.sigma * z99);
+    const p99Overage = Math.max(0, p99Need - pool);
+    const cappedP99 = subsCost + reco.budgetDollars;
+    const uncappedP99 = subsCost + p99Overage * CREDIT_RATE;
+    $('bud-save').textContent = fmtMoneyShort(cappedP99);
+    $('bud-save-sub').textContent = `vs ${fmtMoneyShort(uncappedP99)} uncapped (saves ${fmtMoneyShort(uncappedP99 - cappedP99)} on tail months)`;
+
+    // Chart
+    const W = 1100, H = 360;
+    const margin = { top: 16, right: 70, bottom: 40, left: 80 };
+    const w = W - margin.left - margin.right;
+    const h = H - margin.top - margin.bottom;
+    const c = d3.select('#chart-budget-curve').html('');
+    if (!c.node()) return;
+    const svg = c.append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleLinear().domain([0, 3]).range([0, w]);
+    const yL = d3.scaleLinear().domain([0, d3.max(series, d => d.ePaid * CREDIT_RATE) * 1.1 || 1]).range([h, 0]);
+    const yR = d3.scaleLinear().domain([0, 1]).range([h, 0]);
+
+    g.append('g').attr('class','grid').call(d3.axisLeft(yL).ticks(5).tickSize(-w).tickFormat(''));
+    g.append('g').attr('class','axis').attr('transform',`translate(0,${h})`)
+      .call(d3.axisBottom(x).ticks(7).tickFormat(d => d.toFixed(1) + '×'));
+    g.append('g').attr('class','axis').call(d3.axisLeft(yL).ticks(6).tickFormat(d => fmtMoneyShort(d)));
+    g.append('g').attr('class','axis').attr('transform',`translate(${w},0)`)
+      .call(d3.axisRight(yR).ticks(5).tickFormat(d3.format('.0%')));
+    g.append('text').attr('class','axis-label').attr('x', w/2).attr('y', h+30).attr('text-anchor','middle')
+      .text('Budget cap as a multiple of projected monthly overage');
+    g.append('text').attr('class','axis-label').attr('transform','rotate(-90)').attr('x', -h/2).attr('y', -52).attr('text-anchor','middle')
+      .text('Expected paid overage / mo');
+    g.append('text').attr('class','axis-label').attr('transform','rotate(-90)').attr('x', -h/2).attr('y', w + 50).attr('text-anchor','middle').attr('fill','var(--danger-emphasis)')
+      .text('Probability of hitting cap');
+
+    const linePaid = d3.line().x(d => x(d.mult)).y(d => yL(d.ePaid * CREDIT_RATE));
+    const lineRisk = d3.line().x(d => x(d.mult)).y(d => yR(d.pHit));
+    g.append('path').datum(series).attr('fill','none').attr('stroke','var(--accent-emphasis)').attr('stroke-width',2.5).attr('d', linePaid);
+    g.append('path').datum(series).attr('fill','none').attr('stroke','var(--danger-emphasis)').attr('stroke-width',2).attr('stroke-dasharray','4,3').attr('d', lineRisk);
+
+    // Recommendation marker
+    g.append('line').attr('x1', x(reco.mult)).attr('x2', x(reco.mult)).attr('y1', 0).attr('y2', h)
+      .attr('stroke','var(--success-emphasis)').attr('stroke-width', 2).attr('stroke-dasharray','5,3');
+    g.append('text').attr('x', x(reco.mult) + 6).attr('y', 14)
+      .attr('font-size', 11).attr('fill','var(--success-fg)').attr('font-weight', 600)
+      .text(`Recommended: ${reco.mult.toFixed(2)}× = ${fmtMoneyShort(reco.budgetDollars)}/mo`);
+    // Target risk horizontal
+    g.append('line').attr('x1', 0).attr('x2', w).attr('y1', yR(s.target)).attr('y2', yR(s.target))
+      .attr('stroke','var(--danger-emphasis)').attr('stroke-width', 1).attr('stroke-dasharray','2,2').attr('opacity',0.5);
+
+    // Callout summary
+    const totalAtReco = subsCost + reco.ePaid * CREDIT_RATE;
+    $('budget-callout-title').innerHTML = `Set the org overage budget to <strong>${fmtMoneyShort(reco.budgetDollars)} / month</strong> (${fmtInt(Math.round(reco.budgetCredits))} credits)`;
+    $('budget-callout-body').innerHTML = `
+      Above the ${fmtCompact(pool)}-credit pool from your optimum mix${s.quotasOn ? ' and per-user caps' : ''}.
+      At this budget, the cap is breached in <strong>${(reco.pHit*100).toFixed(1)}% of months</strong> (≤ your ${(s.target*100).toFixed(0)}% target),
+      expected paid overage is <strong>${fmtMoneyShort(reco.ePaid * CREDIT_RATE)}/mo</strong>,
+      and you save <strong>${fmtMoneyShort((uncapped.ePaid - reco.ePaid) * CREDIT_RATE)}/mo</strong> in expectation
+      vs an uncapped policy that lets the worst-case tail flow through unchecked.
+      Combined cost at this configuration ≈ <strong>${fmtMoneyShort(totalAtReco)}/mo</strong>
+      (subs ${fmtMoneyShort(subsCost)} + expected overage ${fmtMoneyShort(reco.ePaid * CREDIT_RATE)}).
+    `;
+  }
+
+  function renderQuotasAndBudget() {
+    QUOTAS = buildQuotaModel();
+    renderQuotaCards();
+    renderQuotaDistribution();
+    renderBudget();
+  }
+
+  // Wire budget controls
+  ['bud-target','bud-vol','bud-quotas-on'].forEach(id => {
+    const el = $(id); if (el) el.addEventListener('input', renderBudget);
+    if (el && el.tagName === 'SELECT') el.addEventListener('change', renderBudget);
+  });
+
+  // ======================================================================
   //  GO
   // ======================================================================
   renderHeadline();
@@ -1097,4 +1396,5 @@
   renderSubstitutions();
   renderWorkflow();
   refreshScenario();
+  renderQuotasAndBudget();
 })();

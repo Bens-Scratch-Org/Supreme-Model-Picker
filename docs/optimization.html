@@ -35,6 +35,17 @@
   .strat-card .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .strat-card .sub { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
   .strat-card .breakdown { font-size: 12px; color: var(--fg-muted); margin-top: 8px; line-height: 1.5; }
+  .quota-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 8px; }
+  @media (max-width: 1100px) { .quota-grid { grid-template-columns: repeat(2,1fr); } }
+  .quota-card { background: var(--canvas-default); border: 1px solid var(--border-default); border-radius: 10px; padding: 14px 14px 12px; position: relative; overflow: hidden; }
+  .quota-card .top-bar { position: absolute; top:0; left:0; right:0; height: 4px; }
+  .quota-card h4 { margin: 4px 0 2px; font-size: 14px; }
+  .quota-card .meta { font-size: 12px; color: var(--fg-muted); }
+  .quota-card .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 8px; }
+  .quota-card .sub { font-size: 11px; color: var(--fg-muted); margin-top: 2px; }
+  .quota-card .pcts { font-size: 12px; color: var(--fg-muted); margin-top: 8px; display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
+  .quota-card .pcts strong { display: block; color: var(--fg-default); font-variant-numeric: tabular-nums; }
+  .quota-card .desc { font-size: 12px; color: var(--fg-default); margin-top: 10px; line-height: 1.45; padding-top: 10px; border-top: 1px dashed var(--border-default); }
   .scen-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; padding: 16px; }
   .scen-field { display: flex; flex-direction: column; gap: 4px; }
   .scen-field label { font-size: 12px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
@@ -98,6 +109,7 @@
       <a href="#headline">Headline</a>
       <a href="#personas">Personas</a>
       <a href="#plan-mix">Plan mix</a>
+      <a href="#quotas">Quotas &amp; budget</a>
       <a href="#model-swap">Model swaps</a>
       <a href="#workflow">Workflow</a>
       <a href="#scenario">Scenario</a>
@@ -218,9 +230,95 @@
   <div class="strat-grid" style="margin-top:14px" id="strat-grid"></div>
 </section>
 
-<!-- ========== 4. MODEL SUBSTITUTION ========== -->
+<!-- ========== 4. QUOTAS & OVERAGE BUDGET ========== -->
+<section id="quotas">
+  <h2><span class="num">4</span>Per-user quotas &amp; overage budget — protect the pool, protect finance</h2>
+  <p class="section-lede">
+    Plan mix sets the <em>size</em> of the entitlement pool. Two more levers decide how that pool
+    actually performs in production: <strong>per-user spending limits</strong> (so a single runaway
+    agent loop can't drain everyone's allowance) and the <strong>org-level overage budget</strong>
+    (the hard ceiling the enterprise admin sets above the pool — billed-only-up-to). Both are
+    derived directly from your usage distribution, not generic %s.
+  </p>
+
+  <h3 style="margin:22px 0 6px;font-size:16px">Per-class spending limits — &ldquo;cap each persona at the 95th percentile of itself&rdquo;</h3>
+  <p class="section-lede" style="margin-bottom:14px">
+    For each class we compute the actual P50, P90, P95 of monthly credit consumption and recommend
+    a per-user cap at <strong>P95 × 1.15 buffer</strong>. That keeps 95%+ of users completely
+    unblocked while it ring-fences runaway loops. The grid below also shows the resulting
+    <em>capped pool demand</em> — the worst-case month at these caps — vs the optimum pool from
+    section 3, so you can see headroom at a glance.
+  </p>
+  <div class="quota-grid" id="quota-cards"></div>
+
+  <div class="chart-card" style="margin-top:18px">
+    <div class="chart-title">Cap effect on the usage distribution</div>
+    <div class="chart-sub">Same per-seat distribution as section 2, but with each persona's recommended cap drawn as a horizontal line. Bars above the line are the credits a cap would ring-fence; the labelled total is the worst-case pool demand at these caps.</div>
+    <div id="chart-quota-distribution"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--danger-emphasis)"></span>Power cap</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--attention-emphasis)"></span>Regular cap</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>Light cap</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--fg-muted)"></span>Dormant cap</span>
+    </div>
+  </div>
+
+  <h3 style="margin:26px 0 6px;font-size:16px">Enterprise overage budget — the hard ceiling above the pool</h3>
+  <p class="section-lede" style="margin-bottom:14px">
+    The enterprise budget limit is the maximum overage spend GitHub will charge in any month — when
+    it's reached, premium requests stop being billed (they revert to free models or are blocked).
+    Setting it correctly is a stochastic problem: month-to-month token consumption swings ±20–30%
+    around its trend. We model that as a log-normal multiplier (σ = 0.25) on the projected
+    monthly need, then for each candidate budget compute (a) probability that month exceeds the
+    budget — i.e. you hit the cap and lose access — and (b) expected paid overage. The
+    recommendation is the smallest budget where <strong>cap-hit probability ≤ target</strong>.
+  </p>
+  <div class="budget-controls" style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:14px">
+    <div class="field" style="min-width:240px">
+      <label for="bud-target">Target cap-hit risk
+        <span style="color:var(--fg-subtle);font-weight:400">(<span id="bud-target-val">5</span>% of months)</span>
+      </label>
+      <input type="range" id="bud-target" min="1" max="25" step="1" value="5">
+    </div>
+    <div class="field" style="min-width:220px">
+      <label for="bud-vol">Monthly volatility (σ)
+        <span style="color:var(--fg-subtle);font-weight:400">(<span id="bud-vol-val">25</span>%)</span>
+      </label>
+      <input type="range" id="bud-vol" min="10" max="50" step="5" value="25">
+    </div>
+    <div class="field" style="min-width:240px">
+      <label for="bud-quotas-on">Apply per-user caps</label>
+      <select id="bud-quotas-on">
+        <option value="on" selected>Yes — cap power/regular at P95</option>
+        <option value="off">No — no per-user caps</option>
+      </select>
+    </div>
+  </div>
+  <div class="opt-grid" style="grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px">
+    <div class="stat-card"><div class="stat-label">Pool entitlement</div><div class="stat-value" id="bud-pool">—</div><div class="stat-sub" id="bud-pool-sub">credits / mo</div></div>
+    <div class="stat-card"><div class="stat-label">Projected need</div><div class="stat-value" id="bud-need">—</div><div class="stat-sub" id="bud-need-sub">at current trend</div></div>
+    <div class="stat-card best"><div class="stat-label">Recommended budget</div><div class="stat-value" id="bud-reco">—</div><div class="stat-sub" id="bud-reco-sub">expected spend / mo</div></div>
+    <div class="stat-card"><div class="stat-label">Worst-case month under cap</div><div class="stat-value" id="bud-save">—</div><div class="stat-sub" id="bud-save-sub">vs uncapped P99 tail</div></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Overage budget vs cap-hit risk and expected spend</div>
+    <div class="chart-sub">X-axis = budget as a multiple of the projected overage. Solid line = expected paid overage at that budget; dashed line = probability the budget is hit (right axis). The vertical green line marks the recommended budget at your target risk.</div>
+    <div id="chart-budget-curve"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>Expected paid overage / mo</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--danger-emphasis);border:1px dashed var(--danger-emphasis)"></span>Probability of hitting the cap</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--success-emphasis)"></span>Recommended budget</span>
+    </div>
+  </div>
+  <div id="budget-callout" class="callout success" style="margin-top:14px">
+    <div class="callout-title" id="budget-callout-title">Computing recommendation…</div>
+    <div class="callout-body" id="budget-callout-body"></div>
+  </div>
+</section>
+
+<!-- ========== 5. MODEL SUBSTITUTION ========== -->
 <section id="model-swap">
-  <h2><span class="num">4</span>Model substitution — same work, fewer credits</h2>
+  <h2><span class="num">5</span>Model substitution — same work, fewer credits</h2>
   <p class="section-lede">
     Each row below is a model in your usage with a credit-equivalent recommendation drawn from
     the analysis (<a href="analysis/model-comparison.md#performance-per-dollar-leaders-under-token-pricing">Performance-per-dollar leaders</a>). The credits-saved column assumes 100% substitution; the
@@ -253,9 +351,9 @@
   </div>
 </section>
 
-<!-- ========== 5. WORKFLOW STRATEGY ========== -->
+<!-- ========== 6. WORKFLOW STRATEGY ========== -->
 <section id="workflow">
-  <h2><span class="num">5</span>Workflow tier strategy — right model in right mode</h2>
+  <h2><span class="num">6</span>Workflow tier strategy — right model in right mode</h2>
   <p class="section-lede">
     Token cost scales linearly with model price but quadratically with workflow size — agent
     mode sends 15× the tokens of a chat, CLI sends 50×, the cloud agent up to 200×. The
@@ -282,7 +380,7 @@
 
 <!-- ========== 6. SCENARIO ========== -->
 <section id="scenario">
-  <h2><span class="num">6</span>Scenario builder — pull every lever at once</h2>
+  <h2><span class="num">7</span>Scenario builder — pull every lever at once</h2>
   <p class="section-lede">
     Each slider below is an optimisation lever applied as a percentage of the addressable
     population. Dragging any slider recomputes the headline KPIs above, the model-mix
@@ -329,7 +427,7 @@
 
 <!-- ========== 7. FORECAST ========== -->
 <section id="forecast">
-  <h2><span class="num">7</span>12-month forecast — Apr 2026 → Apr 2027</h2>
+  <h2><span class="num">8</span>12-month forecast — Apr 2026 → Apr 2027</h2>
   <p class="section-lede">
     Projects monthly Copilot spend across the next year under three trajectories:
     <strong>baseline</strong> (no optimisation), <strong>optimised</strong> (scenario above
@@ -386,7 +484,7 @@
 
 <!-- ========== 8. RECOMMENDATIONS ========== -->
 <section id="actions">
-  <h2><span class="num">8</span>Top actions — sized to your data</h2>
+  <h2><span class="num">9</span>Top actions — sized to your data</h2>
   <p class="section-lede">A prioritised playbook ranked by absolute monthly saving. Each action is concrete enough to assign an owner.</p>
   <ul class="reco-list" id="action-list"></ul>
 </section>
