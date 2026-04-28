@@ -24,6 +24,7 @@ This repo is a deep dive into that disagreement and into the June 1, 2026 transi
 | 📊 **[Interactive data story (GitHub Pages)](https://bens-scratch-org.github.io/Supreme-Model-Picker/)** | D3.js walkthrough — tier explainer, multiplier ladder, subsidy bars (with chat ↔ agent toggle), workflow-mode log scale, cost-vs-SWE-bench scatter, live calculator (PRU vs AI Credits), and an interactive **pooling visualization** for Business & Enterprise. |
 | 📄 **[Full analysis (`analysis/model-comparison.md`)](analysis/model-comparison.md)** | The source document — now ~1,400 lines. Executive summary, GitHub AI Credits + pooling section, benchmarks, multipliers, hidden subsidy structure, mode-by-mode token economics, persona-level winners and losers, per-task recommendations, and the rebased annual-subscriber multiplier table. |
 | 📈 **[Cost-analysis page (after upload)](https://bens-scratch-org.github.io/Supreme-Model-Picker/cost-analysis.html)** | Drop a Copilot metrics-export NDJSON file in and get a per-org reconciliation in both **PRU view** (today) and **AI Credits view** (June 1 onward), with a pooled-allowance fit projection for Business / Enterprise plans. |
+| 🎛️ **[Optimisation insights page](https://bens-scratch-org.github.io/Supreme-Model-Picker/optimization.html)** | Persona segmentation (power / regular / light / dormant), Business-vs-Enterprise plan-mix sweep, model-substitution waterfall, workflow-routing strategy, scenario sliders for substitution / caching / agent-loop / dormant reclamation, and a 12-month forecast under conservative and aggressive plays. Loads your upload from the cost-analysis page or falls back to a bundled 195-user demo fleet. |
 
 ## 🎯 The fundamental question — answered on April 27
 
@@ -66,10 +67,13 @@ That same ratio for Opus 4.5/4.6 on a cloud-agent run hits **200×** — two ord
     ├── index.html                  ← interactive data story (with pooling section)
     ├── usage.html                  ← Copilot metrics-export NDJSON uploader
     ├── cost-analysis.html          ← post-upload PRU vs AI Credits reconciliation
+    ├── optimization.html           ← UBB optimisation insights (personas, plan-mix, scenarios, 12-mo forecast)
     ├── styles.css                  ← GitHub Primer design tokens
     ├── data.js                     ← models, AI Credits plans, pool scenarios, annual-multiplier rebase table
+    ├── demo-data.js                ← bundled 195-user demo fleet for the optimisation page
     ├── app.js                      ← D3 charts + calculator + pooling visualization
-    └── cost-analysis.js            ← per-org reconciliation + pooled-allowance fit
+    ├── cost-analysis.js            ← per-org reconciliation + pooled-allowance fit
+    └── optimization.js             ← persona segmentation, plan-mix sweep, scenario engine, forecast
 ```
 
 The website and the analysis are kept in lockstep — every chart, tier rationale, and impact range on the site is sourced from the markdown.

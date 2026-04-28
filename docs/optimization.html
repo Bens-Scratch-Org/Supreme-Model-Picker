@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UBB Optimization · Maximise value, minimise cost · Copilot</title>
+<meta name="description" content="Strategic optimisation playbook for GitHub Copilot under usage-based billing. Persona segmentation, plan-mix optimiser, model-substitution analysis, scenario modelling, and 12-month cost forecast — driven by your uploaded usage data.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%231f6feb' d='M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Optimization page-local tweaks */
+  .opt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 12px 0 8px; }
+  .opt-card { background: var(--canvas-default); border: 1px solid var(--border-default); border-radius: 10px; padding: 14px 16px; }
+  .opt-card .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); font-weight: 600; }
+  .opt-card .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .opt-card .sub { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
+  .opt-card.win .v { color: var(--success-fg); }
+  .opt-card.loss .v { color: var(--danger-fg); }
+  .opt-card.accent .v { color: var(--accent-fg); }
+  .persona-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+  @media (max-width: 880px) { .persona-grid { grid-template-columns: repeat(2,1fr); } }
+  .persona-card { background: var(--canvas-default); border: 1px solid var(--border-default); border-radius: 10px; padding: 14px; position: relative; overflow: hidden; }
+  .persona-card .top-bar { position: absolute; top:0; left:0; right:0; height: 4px; }
+  .persona-card h4 { margin: 4px 0 2px; font-size: 14px; }
+  .persona-card .meta { font-size: 12px; color: var(--fg-muted); }
+  .persona-card .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 8px; }
+  .persona-card .sub { font-size: 11px; color: var(--fg-muted); margin-top: 2px; }
+  .persona-card .desc { font-size: 12px; color: var(--fg-default); margin-top: 8px; line-height: 1.4; }
+  .strat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 880px) { .strat-grid { grid-template-columns: 1fr; } }
+  .strat-card { background: var(--canvas-default); border: 1px solid var(--border-default); border-radius: 10px; padding: 14px; }
+  .strat-card.best { border-color: var(--success-emphasis); box-shadow: 0 0 0 2px var(--success-subtle); }
+  .strat-card .ribbon { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; background: var(--success-emphasis); color: white; font-weight: 700; }
+  .strat-card h4 { margin: 6px 0 4px; font-size: 14px; }
+  .strat-card .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .strat-card .sub { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
+  .strat-card .breakdown { font-size: 12px; color: var(--fg-muted); margin-top: 8px; line-height: 1.5; }
+  .scen-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; padding: 16px; }
+  .scen-field { display: flex; flex-direction: column; gap: 4px; }
+  .scen-field label { font-size: 12px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .scen-field .row { display: flex; align-items: center; gap: 8px; }
+  .scen-field input[type=range] { flex: 1; }
+  .scen-field .val { font-size: 13px; font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; font-weight: 600; color: var(--fg-default); }
+  .scen-field .hint { font-size: 11px; color: var(--fg-muted); }
+  .reco-list { list-style: none; padding: 0; margin: 0; }
+  .reco-list li { padding: 12px 14px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--canvas-default); margin-bottom: 10px; display: flex; gap: 14px; align-items: flex-start; }
+  .reco-list .icon { font-size: 22px; flex-shrink: 0; }
+  .reco-list .body strong { display: block; margin-bottom: 2px; }
+  .reco-list .body .num { color: var(--success-fg); font-variant-numeric: tabular-nums; font-weight: 700; }
+  .opt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .opt-table th, .opt-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-muted); text-align: right; white-space: nowrap; }
+  .opt-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); font-weight: 600; background: var(--canvas-subtle); position: sticky; top: 0; }
+  .opt-table th:first-child, .opt-table td:first-child { text-align: left; white-space: normal; }
+  .opt-table tr:hover td { background: var(--canvas-subtle); }
+  .opt-table .pos { color: var(--success-fg); font-weight: 600; }
+  .opt-table .neg { color: var(--danger-fg); font-weight: 600; }
+  .opt-table .muted { color: var(--fg-muted); }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border-default); background: var(--canvas-subtle); color: var(--fg-muted); }
+  .badge.win { background: var(--success-subtle); color: var(--success-fg); border-color: var(--success-emphasis); }
+  .badge.warn { background: var(--attention-subtle); color: var(--attention-fg); border-color: var(--attention-emphasis); }
+  .badge.danger { background: var(--danger-subtle); color: var(--danger-fg); border-color: var(--danger-emphasis); }
+  .empty-banner {
+    background: var(--accent-subtle); border: 1px solid var(--accent-emphasis);
+    border-radius: 10px; padding: 14px 16px; font-size: 13px; color: var(--fg-default);
+    margin: 12px 0;
+  }
+  .empty-banner strong { color: var(--accent-fg); }
+  .data-source-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; padding: 4px 10px; border-radius: 999px;
+    background: var(--canvas-subtle); border: 1px solid var(--border-default);
+    color: var(--fg-muted); font-weight: 500;
+  }
+  .data-source-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success-emphasis); }
+  .data-source-pill.fallback .dot { background: var(--attention-emphasis); }
+</style>
+</head>
+<body>
+
+<div class="announce-bar" role="note">
+  <span class="pill">Optimisation playbook</span>
+  <span><strong>From June&nbsp;1, 2026 — every token has a price tag.</strong>
+    Tune your plan mix, model selection, and workflow strategy for usage-based billing. Live scenario modelling and a 12-month forecast below.
+    <a href="https://docs.github.com/en/copilot/concepts/billing/usage-based-billing-for-organizations-and-enterprises">Pooling docs</a>.
+  </span>
+</div>
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 005.47 7.59c.4.07.55-.17.55-.38v-1.34c-2.23.49-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.05-.49.05-.49.81.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.7 7.7 0 018 4.6c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.19c0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>UBB Optimisation</span>
+    </div>
+    <nav class="nav-links">
+      <a href="index.html">← Pricing data story</a>
+      <a href="usage.html">Your usage</a>
+      <a href="cost-analysis.html">Cost analysis</a>
+      <a href="#headline">Headline</a>
+      <a href="#personas">Personas</a>
+      <a href="#plan-mix">Plan mix</a>
+      <a href="#model-swap">Model swaps</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#scenario">Scenario</a>
+      <a href="#forecast">12-mo forecast</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <span class="eyebrow">Strategy · post-June 1, 2026 · usage-based billing</span>
+  <h1>Maximise <span class="accent">value</span>. Minimise <span class="danger">tokens</span>. Forecast <span class="accent">12 months out</span>.</h1>
+  <p class="lede">
+    Under GitHub AI Credits the cost levers stop being &ldquo;how many premium requests did
+    we burn?&rdquo; and become &ldquo;<em>which</em> seat is using <em>which</em> model in
+    <em>which</em> mode?&rdquo;. This page combines your uploaded usage with the published
+    per-token rates and pooling rules to output a concrete optimisation plan: an optimal
+    <strong>Business / Enterprise mix</strong>, model substitutions ranked by saving,
+    workflow-tier strategy, and a <strong>12-month forecast</strong> with adoption ramp.
+    Everything below recomputes live as you move sliders.
+  </p>
+  <div style="margin-top:12px"><span id="data-source" class="data-source-pill fallback"><span class="dot"></span><span id="data-source-label">No upload yet — using demo fleet defaults. <a href="usage.html" style="margin-left:6px">Upload yours →</a></span></span></div>
+</div>
+
+<!-- ========== 1. HEADLINE ========== -->
+<section id="headline" class="no-border">
+  <h2><span class="num">1</span>Headline — what optimisation is worth</h2>
+  <p class="section-lede" id="headline-lede">
+    Three numbers that frame the rest of the page: today&rsquo;s baseline AI-Credit run-rate,
+    the run-rate after applying every lever on this page at 100% adoption, and the cumulative
+    12-month delta if you ramp adoption from 0% → 100% over six months. Numbers refresh as you
+    change scenario inputs below.
+  </p>
+  <div class="opt-grid">
+    <div class="opt-card"><div class="lbl">Fleet seats</div><div class="v" id="hdl-seats">—</div><div class="sub" id="hdl-seats-sub">—</div></div>
+    <div class="opt-card"><div class="lbl">Monthly interactions</div><div class="v" id="hdl-int">—</div><div class="sub">user-initiated prompts</div></div>
+    <div class="opt-card"><div class="lbl">Baseline AI Credits / mo</div><div class="v" id="hdl-baseline">—</div><div class="sub" id="hdl-baseline-sub">at current model + workflow mix</div></div>
+    <div class="opt-card accent"><div class="lbl">Optimised AI Credits / mo</div><div class="v" id="hdl-opt">—</div><div class="sub">scenario sliders applied</div></div>
+    <div class="opt-card win"><div class="lbl">Monthly savings</div><div class="v" id="hdl-save">—</div><div class="sub" id="hdl-save-sub">vs baseline</div></div>
+    <div class="opt-card win"><div class="lbl">12-month savings</div><div class="v" id="hdl-12">—</div><div class="sub">at full adoption ramp</div></div>
+  </div>
+  <div class="callout success" id="headline-callout" style="margin-top:14px">
+    <strong id="headline-callout-title">Loading optimisation engine…</strong>
+    <span id="headline-callout-body"></span>
+  </div>
+</section>
+
+<!-- ========== 2. PERSONAS ========== -->
+<section id="personas">
+  <h2><span class="num">2</span>User-class segmentation — who actually drives the bill</h2>
+  <p class="section-lede" id="personas-lede">
+    Heavy-tail usage is the single biggest reason pooling exists. We classify every active seat
+    in your upload (or the synthetic demo fleet) into four bands by interactions per active day.
+    Each band has a very different optimisation profile — and a very different argument for
+    Business vs Enterprise plan placement.
+  </p>
+  <div class="persona-grid" id="persona-cards"></div>
+  <div class="chart-card">
+    <div class="chart-title">Usage distribution — credits/month per seat (sorted descending)</div>
+    <div class="chart-sub">The horizontal red line marks the per-seat Business pool contribution; the green line marks Enterprise. Seats above the line are net-takers from the pool; seats below are net-givers.</div>
+    <div id="chart-distribution"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--danger-emphasis)"></span>Power users</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--attention-emphasis)"></span>Regular</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>Light</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--fg-subtle)"></span>Dormant</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Where each persona spends — feature mix by class</div>
+    <div class="chart-sub">Stacked share of interactions by Copilot feature, per persona. The further right a stack tilts toward agent / CLI, the more tokens that persona burns per interaction.</div>
+    <div id="chart-persona-features"></div>
+    <div id="legend-persona-features" class="legend"></div>
+  </div>
+</section>
+
+<!-- ========== 3. PLAN MIX ========== -->
+<section id="plan-mix">
+  <h2><span class="num">3</span>Optimal plan mix — Business vs Enterprise</h2>
+  <p class="section-lede">
+    Under pooling, the per-seat allowance ratio (Business 1,900 c · Enterprise 3,900 c at
+    standard rates; 3,000 c · 7,000 c during the Jun–Aug 2026 promo) and the price differential
+    ($19 vs $39) creates a sweet spot per fleet shape. We sweep every Business-share from 0% to
+    100% and pick the configuration that <strong>covers your projected token cost with zero
+    overage at lowest total monthly bill</strong>.
+  </p>
+  <div class="pool-controls" style="margin-top:8px">
+    <div class="field">
+      <label for="mix-seats">Total seats <span style="color:var(--fg-subtle);font-weight:400">(<span id="mix-seats-val">100</span>)</span></label>
+      <input type="range" id="mix-seats" min="5" max="2000" step="5" value="100">
+    </div>
+    <div class="field">
+      <label for="mix-period">Pricing period</label>
+      <select id="mix-period">
+        <option value="promo" selected>Jun 1 – Sep 1, 2026 (introductory)</option>
+        <option value="standard">Sep 1, 2026 onward</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="mix-power-share">Power-user share (%)</label>
+      <input type="range" id="mix-power-share" min="0" max="50" step="1" value="20">
+      <span class="hint" style="font-size:11px;color:var(--fg-muted)"><span id="mix-power-share-val">20</span>% of seats consume <span id="mix-power-mult-val">2.5</span>× per-seat allowance</span>
+    </div>
+    <div class="field">
+      <label for="mix-power-mult">Power consumption ×</label>
+      <input type="range" id="mix-power-mult" min="1" max="10" step="0.5" value="2.5">
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Total monthly cost across the 0% → 100% Business mix sweep</div>
+    <div class="chart-sub">Y-axis = subscription + projected overage. The vertical green dashed line marks the optimum (lowest total). Hover any point to see the breakdown.</div>
+    <div id="chart-mix-sweep"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>Subscription cost</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--danger-emphasis)"></span>Projected overage</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--success-emphasis)"></span>Total monthly cost</span>
+    </div>
+  </div>
+  <div class="strat-grid" style="margin-top:14px" id="strat-grid"></div>
+</section>
+
+<!-- ========== 4. MODEL SUBSTITUTION ========== -->
+<section id="model-swap">
+  <h2><span class="num">4</span>Model substitution — same work, fewer credits</h2>
+  <p class="section-lede">
+    Each row below is a model in your usage with a credit-equivalent recommendation drawn from
+    the analysis (<a href="analysis/model-comparison.md#performance-per-dollar-leaders-under-token-pricing">Performance-per-dollar leaders</a>). The credits-saved column assumes 100% substitution; the
+    waterfall chart caps each swap at <strong>70% adoption</strong> (typical pace at which
+    teams actually retrain their reflex model picks).
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Savings waterfall — applying each substitution at 70% adoption</div>
+    <div class="chart-sub">Bars descend left-to-right: starting from baseline credits/mo, each swap shaves the bar; the final green bar is the optimised total.</div>
+    <div id="chart-waterfall"></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Per-model substitution table</div>
+    <div class="chart-sub">"% solved per $1" comes from SWE-bench bash-only resolve rate ÷ typical-chat token cost. Swap = recommended replacement (same or better solve rate, lower $).</div>
+    <div style="max-height:520px;overflow:auto;border:1px solid var(--border-default);border-radius:8px;background:var(--canvas-default)">
+      <table class="opt-table" id="swap-table">
+        <thead><tr>
+          <th>Current model</th>
+          <th>Tier</th>
+          <th>Interactions</th>
+          <th>Credits / mo</th>
+          <th>SWE-bench / $1</th>
+          <th>→ Recommended</th>
+          <th>Δ Credits / chat</th>
+          <th>Saving / mo (70% adopt)</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 5. WORKFLOW STRATEGY ========== -->
+<section id="workflow">
+  <h2><span class="num">5</span>Workflow tier strategy — right model in right mode</h2>
+  <p class="section-lede">
+    Token cost scales linearly with model price but quadratically with workflow size — agent
+    mode sends 15× the tokens of a chat, CLI sends 50×, the cloud agent up to 200×. The
+    optimisation rule from the analysis is simple: <strong>cheap models for cheap modes,
+    premium models reserved for synthesis turns only</strong>. Below: each Copilot feature
+    in your file, today's average cost, and the &ldquo;routed&rdquo; cost if every interaction
+    used the workflow-appropriate model.
+  </p>
+  <div class="chart-card">
+    <div class="chart-title">Cost per interaction by feature — current vs routed</div>
+    <div class="chart-sub">Each pair of bars compares observed average credits per interaction to the credits a workflow-appropriate model would consume in the same mode. Bigger gap = larger optimisation opportunity.</div>
+    <div id="chart-workflow"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>Current avg credits / interaction</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--success-emphasis)"></span>Routed (right-model) credits / interaction</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Cumulative monthly saving from workflow routing alone</div>
+    <div class="chart-sub">If you sent every interaction in this feature to its routed model, this is the credits-per-month you'd save.</div>
+    <div id="chart-workflow-save"></div>
+  </div>
+</section>
+
+<!-- ========== 6. SCENARIO ========== -->
+<section id="scenario">
+  <h2><span class="num">6</span>Scenario builder — pull every lever at once</h2>
+  <p class="section-lede">
+    Each slider below is an optimisation lever applied as a percentage of the addressable
+    population. Dragging any slider recomputes the headline KPIs above, the model-mix
+    spotlight chart on the right, and the 12-month forecast in §7.
+  </p>
+  <div class="chart-card scen-controls" id="scen-controls">
+    <div class="scen-field">
+      <label for="scen-substitute">Model substitution adoption</label>
+      <div class="row"><input type="range" id="scen-substitute" min="0" max="100" step="5" value="70"><span class="val" id="scen-substitute-val">70%</span></div>
+      <span class="hint">% of premium-tier interactions that move to the recommended cheaper-but-equivalent model.</span>
+    </div>
+    <div class="scen-field">
+      <label for="scen-routing">Workflow routing adoption</label>
+      <div class="row"><input type="range" id="scen-routing" min="0" max="100" step="5" value="50"><span class="val" id="scen-routing-val">50%</span></div>
+      <span class="hint">% of interactions routed to the workflow-appropriate model (Haiku for traversal, Opus for synthesis).</span>
+    </div>
+    <div class="scen-field">
+      <label for="scen-cache">Prompt-cache adoption</label>
+      <div class="row"><input type="range" id="scen-cache" min="0" max="100" step="5" value="40"><span class="val" id="scen-cache-val">40%</span></div>
+      <span class="hint">% of input tokens served from the cached-input rate (~10% of full price).</span>
+    </div>
+    <div class="scen-field">
+      <label for="scen-loop">Agent-loop tightening</label>
+      <div class="row"><input type="range" id="scen-loop" min="0" max="50" step="5" value="20"><span class="val" id="scen-loop-val">20%</span></div>
+      <span class="hint">% reduction in tokens-per-agent-turn through summarisation, retrieval scoping, fewer redundant tool calls.</span>
+    </div>
+    <div class="scen-field">
+      <label for="scen-mix">Plan-mix shift toward Enterprise</label>
+      <div class="row"><input type="range" id="scen-mix" min="0" max="100" step="5" value="30"><span class="val" id="scen-mix-val">30%</span></div>
+      <span class="hint">% of seats moved from Business to Enterprise. Captures more pool headroom for power users at +$20/seat/mo.</span>
+    </div>
+    <div class="scen-field">
+      <label for="scen-dormant">Dormant-seat reclamation</label>
+      <div class="row"><input type="range" id="scen-dormant" min="0" max="100" step="5" value="50"><span class="val" id="scen-dormant-val">50%</span></div>
+      <span class="hint">% of dormant seats removed at the next billing cycle. Removes both their cost and their pool contribution.</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Optimisation lever attribution — credits saved per lever</div>
+    <div class="chart-sub">Stacked horizontal bar showing how each lever contributes to the optimised monthly figure. Levers are computed in the order shown (each operates on the residual after prior ones).</div>
+    <div id="chart-scenario"></div>
+  </div>
+</section>
+
+<!-- ========== 7. FORECAST ========== -->
+<section id="forecast">
+  <h2><span class="num">7</span>12-month forecast — Apr 2026 → Apr 2027</h2>
+  <p class="section-lede">
+    Projects monthly Copilot spend across the next year under three trajectories:
+    <strong>baseline</strong> (no optimisation), <strong>optimised</strong> (scenario above
+    with linear adoption ramp), and <strong>aggressive</strong> (scenario at +30 percentage
+    points adoption on every lever). The shaded period is the introductory pool-bonus window
+    (Jun 1 – Sep 1 2026); after Sep 1 the per-seat allowance steps down, which is what makes
+    the Sep 2026 cliff so prominent on the baseline curve.
+  </p>
+  <div class="chart-card scen-controls">
+    <div class="scen-field">
+      <label for="fc-seats-growth">Seat growth / mo</label>
+      <div class="row"><input type="range" id="fc-seats-growth" min="0" max="10" step="0.5" value="2"><span class="val" id="fc-seats-growth-val">+2.0%</span></div>
+      <span class="hint">Compound monthly seat growth applied to the fleet base.</span>
+    </div>
+    <div class="scen-field">
+      <label for="fc-usage-growth">Usage growth / seat / mo</label>
+      <div class="row"><input type="range" id="fc-usage-growth" min="-5" max="15" step="0.5" value="3"><span class="val" id="fc-usage-growth-val">+3.0%</span></div>
+      <span class="hint">Per-seat tokens grow as agent adoption deepens (negative if you expect maturation).</span>
+    </div>
+    <div class="scen-field">
+      <label for="fc-ramp">Optimisation ramp (months to full adoption)</label>
+      <div class="row"><input type="range" id="fc-ramp" min="1" max="12" step="1" value="6"><span class="val" id="fc-ramp-val">6 mo</span></div>
+      <span class="hint">Linear ramp from 0% → scenario-slider values over this many months.</span>
+    </div>
+    <div class="scen-field">
+      <label for="fc-aggressive">Aggressive uplift</label>
+      <div class="row"><input type="range" id="fc-aggressive" min="0" max="50" step="5" value="30"><span class="val" id="fc-aggressive-val">+30pp</span></div>
+      <span class="hint">Percentage points added to every lever in the &ldquo;aggressive&rdquo; trajectory.</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Monthly cost — three trajectories over 12 months</div>
+    <div class="chart-sub">Stacked area for each scenario. Hover any month for the dollar figure and a breakdown by sub-component.</div>
+    <div id="chart-forecast"></div>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--danger-emphasis)"></span>Baseline (do nothing)</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--accent-emphasis)"></span>Optimised (your scenario)</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--success-emphasis)"></span>Aggressive</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:var(--attention-subtle); border:1px solid var(--attention-emphasis)"></span>Promo bonus window</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Cumulative 12-month savings vs baseline</div>
+    <div class="chart-sub">Area between Baseline and Optimised lines, summed month by month — your run-rate optimisation budget.</div>
+    <div id="chart-forecast-cumulative"></div>
+  </div>
+  <div class="opt-grid" style="margin-top:14px">
+    <div class="opt-card"><div class="lbl">12-mo baseline spend</div><div class="v" id="fc-base-total">—</div><div class="sub">do-nothing trajectory</div></div>
+    <div class="opt-card win"><div class="lbl">12-mo optimised spend</div><div class="v" id="fc-opt-total">—</div><div class="sub" id="fc-opt-sub">at your scenario</div></div>
+    <div class="opt-card win"><div class="lbl">12-mo savings</div><div class="v" id="fc-save-total">—</div><div class="sub" id="fc-save-sub">vs baseline</div></div>
+    <div class="opt-card accent"><div class="lbl">Aggressive 12-mo savings</div><div class="v" id="fc-agg-save">—</div><div class="sub">at +30pp adoption</div></div>
+  </div>
+</section>
+
+<!-- ========== 8. RECOMMENDATIONS ========== -->
+<section id="actions">
+  <h2><span class="num">8</span>Top actions — sized to your data</h2>
+  <p class="section-lede">A prioritised playbook ranked by absolute monthly saving. Each action is concrete enough to assign an owner.</p>
+  <ul class="reco-list" id="action-list"></ul>
+</section>
+
+<footer>
+  <div>Built with <a href="https://d3js.org">D3.js</a> · Styled with <a href="https://primer.style">GitHub Primer</a> tokens · All math runs in your browser</div>
+  <div class="links">
+    <a href="index.html">Pricing data story</a> ·
+    <a href="usage.html">Your usage</a> ·
+    <a href="cost-analysis.html">Cost analysis</a> ·
+    <a href="https://github.com/Bens-Scratch-Org/Supreme-Model-Picker">Source</a>
+  </div>
+</footer>
+
+<div class="d3-tooltip" id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="data.js"></script>
+<script src="demo-data.js"></script>
+<script src="optimization.js"></script>
+</body>
+</html>
