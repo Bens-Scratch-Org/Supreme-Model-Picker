@@ -195,7 +195,7 @@
   // Persona segmentation. Uploaded payloads from cost-analysis don't include
   // byUser, so demo data carries it explicitly. If absent, synthesise four
   // bands from total interactions assuming a heavy-tailed Pareto-ish split.
-  function buildPersonas() {
+  function buildPersonas(licensedSeats) {
     const usersArr = DATA.byUser;
     const days = (DATA.meta && DATA.meta.days) || 28;
     const totalCredits = BASELINE.totalCredits;
@@ -216,13 +216,10 @@
         if (dailyRate >= 30) bandId = 'power';
         else if (dailyRate >= 8) bandId = 'regular';
         else if (dailyRate >= 1) bandId = 'light';
-        // Per-user credits = proportional to interactions (not perfect, but
-        // closest given we only have aggregate token costs).
         const credits = totalInteractions > 0 ? (u.interactions / totalInteractions) * totalCredits : 0;
         usersBands[bandId].push({ login: u.login, interactions: u.interactions, activeDays: u.activeDays, credits });
       }
     } else {
-      // Synthesise from total interactions: 10% power, 25% regular, 50% light, 15% dormant.
       const totalUsers = (DATA.meta && DATA.meta.users) || 100;
       const distribute = (n, share, baseRate) => {
         const out = [];
@@ -235,30 +232,42 @@
       usersBands.regular = distribute(totalUsers, 0.25, 15);
       usersBands.light = distribute(totalUsers, 0.50, 4);
       usersBands.dormant = distribute(totalUsers, 0.15, 0.2);
-      // Re-distribute credits proportionally
       const allUsers = [].concat(usersBands.power, usersBands.regular, usersBands.light, usersBands.dormant);
       const allInts = allUsers.reduce((s, u) => s + u.interactions, 0) || 1;
       allUsers.forEach(u => { u.credits = (u.interactions / allInts) * totalCredits; });
     }
+    // Pad with phantom dormant seats so the licensed-seat total is reflected
+    // in the pool (extras = unused licenses → contribute their per-seat
+    // allowance to the pool, with zero usage).
+    const activeCount = usersBands.power.length + usersBands.regular.length + usersBands.light.length + usersBands.dormant.length;
+    const target = Math.max(activeCount, licensedSeats || activeCount);
+    const phantomCount = target - activeCount;
+    for (let i = 0; i < phantomCount; i++) {
+      usersBands.dormant.push({ login: `unused-license-${i+1}`, interactions: 0, activeDays: 0, credits: 0, phantom: true });
+    }
     return bands.map(b => ({ ...b, users: usersBands[b.id], count: usersBands[b.id].length, credits: usersBands[b.id].reduce((s, u) => s + u.credits, 0) }));
   }
 
-  const PERSONAS = buildPersonas();
+  let LICENSED_SEATS = (DATA.meta && DATA.meta.users) || 100;
+  let PERSONAS = buildPersonas(LICENSED_SEATS);
 
   // ======================================================================
   //  RENDERERS
   // ======================================================================
 
   function renderHeadline() {
-    const seats = (DATA.meta && DATA.meta.users) || 100;
+    const activeUsers = (DATA.meta && DATA.meta.users) || 100;
     const days = (DATA.meta && DATA.meta.days) || 28;
     const monthScale = 30 / days; // normalise to 30-day month
     const monthlyCredits = BASELINE.totalCredits * monthScale;
     const monthlyDollars = monthlyCredits * CREDIT_RATE;
     const interactionsPerMo = Object.values(DATA.byFeature || {}).reduce((s, f) => s + (f.interactions || 0), 0) * monthScale;
+    const phantoms = Math.max(0, LICENSED_SEATS - activeUsers);
 
-    $('hdl-seats').textContent = fmtInt(seats);
-    $('hdl-seats-sub').textContent = `${fmtInt(days)} active days in upload`;
+    $('hdl-seats').textContent = fmtInt(LICENSED_SEATS);
+    $('hdl-seats-sub').textContent = phantoms > 0
+      ? `${fmtInt(activeUsers)} active + ${fmtInt(phantoms)} unused licenses`
+      : `${fmtInt(days)} active days in upload`;
     $('hdl-int').textContent = fmtCompact(interactionsPerMo).replace(/G/, 'B');
     $('hdl-baseline').textContent = fmtMoneyShort(monthlyDollars);
     $('hdl-baseline-sub').textContent = `${fmtCompact(monthlyCredits).replace(/G/, 'B')} credits/mo`;
@@ -1080,12 +1089,43 @@
   ['mix-seats','mix-period','mix-power-share','mix-power-mult'].forEach(id => {
     const el = $(id); if (el) el.addEventListener('input', () => { renderPlanMix(); refreshScenario(); renderBudget(); renderStrategyComparison(); });
   });
-  // Default seat slider to upload's user count
-  const uploadedUsers = (DATA.meta && DATA.meta.users) || 0;
-  if (uploadedUsers > 0) {
-    const sl = $('mix-seats'); const v = Math.max(5, Math.round(uploadedUsers / 5) * 5);
+  // Default seat slider to total licensed seats
+  function syncMixSeatsToLicensed() {
+    const sl = $('mix-seats'); if (!sl) return;
+    const v = Math.max(5, Math.round(LICENSED_SEATS / 5) * 5);
     if (v > +sl.max) sl.max = String(Math.ceil(v * 1.5));
     sl.value = String(v);
+  }
+  syncMixSeatsToLicensed();
+
+  // License-seats input: re-build personas with phantom dormants and refresh.
+  const licInput = $('license-seats');
+  if (licInput) {
+    licInput.value = String(LICENSED_SEATS);
+    const activeUsers = (DATA.meta && DATA.meta.users) || 0;
+    licInput.min = String(Math.max(1, activeUsers));
+    const updateLicHint = () => {
+      const v = +licInput.value || activeUsers;
+      const extras = Math.max(0, v - activeUsers);
+      $('license-seats-hint').textContent = extras > 0
+        ? `+${fmtInt(extras)} unused licenses → modelled as dormant in pool`
+        : `all licenses match active users in upload`;
+    };
+    updateLicHint();
+    licInput.addEventListener('change', () => {
+      const v = Math.max(activeUsers || 1, Math.round(+licInput.value || activeUsers));
+      licInput.value = String(v);
+      LICENSED_SEATS = v;
+      PERSONAS = buildPersonas(LICENSED_SEATS);
+      QUOTAS = buildQuotaModel(CURRENT_STRATEGY);
+      syncMixSeatsToLicensed();
+      updateLicHint();
+      // Re-render everything that depends on PERSONAS or seat count.
+      renderHeadline();
+      renderPersonas();
+      refreshScenario();
+      renderQuotasAndBudget();
+    });
   }
   ['scen-substitute','scen-routing','scen-cache','scen-loop','scen-mix','scen-dormant',
    'fc-seats-growth','fc-usage-growth','fc-ramp','fc-aggressive'].forEach(id => {
@@ -1168,7 +1208,10 @@
     for (const p of PERSONAS) {
       const policy = QUOTA_POLICY[p.id];
       const sp = strat.perPersona[p.id];
-      const monthlyCredits = (p.users || []).map(u => (u.credits || 0) * monthScale);
+      // Exclude phantom unused-license seats from stats — they're zero by
+      // construction and would distort the quantiles for real dormant users.
+      const realUsers = (p.users || []).filter(u => !u.phantom);
+      const monthlyCredits = realUsers.map(u => (u.credits || 0) * monthScale);
       const p50 = quantile(monthlyCredits, 0.50);
       const p90 = quantile(monthlyCredits, 0.90);
       const p95 = quantile(monthlyCredits, 0.95);
@@ -1226,10 +1269,12 @@
     const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
     // Flatten users with persona id, sorted descending by monthly spend ($).
+    // Skip phantom unused-license seats — they have zero usage by construction.
     const monthScale = 30 / ((DATA.meta && DATA.meta.days) || 28);
     const all = [];
     for (const p of PERSONAS) {
       for (const u of (p.users || [])) {
+        if (u.phantom) continue;
         all.push({ persona: p.id, color: QUOTA_POLICY[p.id].color, dollars: (u.credits || 0) * monthScale * CREDIT_RATE });
       }
     }
