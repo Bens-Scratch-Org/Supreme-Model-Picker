@@ -190,11 +190,25 @@
 
       if (login) {
         let u = a.byUser.get(login);
-        if (!u) { u = { interactions: 0, generations: 0, acceptances: 0, days: new Set() }; a.byUser.set(login, u); }
+        if (!u) { u = { interactions: 0, generations: 0, acceptances: 0, days: new Set(), features: {}, models: {}, cliPrompt: 0, cliOutput: 0 }; a.byUser.set(login, u); }
         u.interactions += interactions;
         u.generations += gens;
         u.acceptances += accepts;
         if (day) u.days.add(day);
+        if (Array.isArray(r.totals_by_feature)) {
+          for (const f of r.totals_by_feature) {
+            const k = f.feature; u.features[k] = (u.features[k] || 0) + (f.user_initiated_interaction_count || 0);
+          }
+        }
+        if (Array.isArray(r.totals_by_model_feature)) {
+          for (const m of r.totals_by_model_feature) {
+            const k = m.model; u.models[k] = (u.models[k] || 0) + (m.user_initiated_interaction_count || 0);
+          }
+        }
+        if (r.used_cli && r.totals_by_cli && r.totals_by_cli.token_usage) {
+          u.cliPrompt += r.totals_by_cli.token_usage.prompt_tokens_sum || 0;
+          u.cliOutput += r.totals_by_cli.token_usage.output_tokens_sum || 0;
+        }
       }
 
       if (Array.isArray(r.totals_by_feature)) {
@@ -305,6 +319,17 @@
         output: a.cli.output,
         byDay: mapToObj(a.cli.byDay),
       },
+      byUser: [...a.byUser.entries()].map(([login, u]) => ({
+        login,
+        interactions: u.interactions,
+        generations: u.generations,
+        acceptances: u.acceptances,
+        activeDays: u.days.size,
+        features: u.features || {},
+        models: u.models || {},
+        cliPrompt: u.cliPrompt || 0,
+        cliOutput: u.cliOutput || 0,
+      })),
     };
     try {
       sessionStorage.setItem('copilotUsageData', JSON.stringify(payload));
