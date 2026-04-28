@@ -46,6 +46,16 @@
   .quota-card .pcts { font-size: 12px; color: var(--fg-muted); margin-top: 8px; display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; }
   .quota-card .pcts strong { display: block; color: var(--fg-default); font-variant-numeric: tabular-nums; }
   .quota-card .desc { font-size: 12px; color: var(--fg-default); margin-top: 10px; line-height: 1.45; padding-top: 10px; border-top: 1px dashed var(--border-default); }
+  .strategy-tabs { display: inline-flex; border: 1px solid var(--border-default); border-radius: 6px; overflow: hidden; background: var(--canvas-subtle); }
+  .strategy-tab { background: transparent; color: var(--fg-default); border: none; padding: 8px 18px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 500; border-right: 1px solid var(--border-default); transition: background 0.1s; }
+  .strategy-tab:last-child { border-right: none; }
+  .strategy-tab.active { background: var(--accent-emphasis); color: #fff; }
+  .strategy-tab:hover:not(.active) { background: var(--canvas-default); }
+  .strat-card.recommended { border-color: var(--success-emphasis); box-shadow: 0 0 0 2px var(--success-subtle); }
+  .strat-card .strat-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; padding: 5px 0; border-bottom: 1px dashed var(--border-muted); }
+  .strat-card .strat-row:last-child { border-bottom: none; }
+  .strat-card .strat-row .k { color: var(--fg-muted); }
+  .strat-card .strat-row .v2 { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--fg-default); font-size: 13px; }
   .scen-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; padding: 16px; }
   .scen-field { display: flex; flex-direction: column; gap: 4px; }
   .scen-field label { font-size: 12px; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
@@ -167,7 +177,7 @@
   </p>
   <div class="persona-grid" id="persona-cards"></div>
   <div class="chart-card">
-    <div class="chart-title">Usage distribution — credits/month per seat (sorted descending)</div>
+    <div class="chart-title">Usage distribution — $ / month per seat (sorted descending)</div>
     <div class="chart-sub">The horizontal red line marks the per-seat Business pool contribution; the green line marks Enterprise. Seats above the line are net-takers from the pool; seats below are net-givers.</div>
     <div id="chart-distribution"></div>
     <div class="legend">
@@ -241,19 +251,33 @@
     derived directly from your usage distribution, not generic %s.
   </p>
 
-  <h3 style="margin:22px 0 6px;font-size:16px">Per-class spending limits — &ldquo;cap each persona at the 95th percentile of itself&rdquo;</h3>
+  <h3 style="margin:22px 0 6px;font-size:16px">Per-class spending limits — pick a quota strategy</h3>
   <p class="section-lede" style="margin-bottom:14px">
-    For each class we compute the actual P50, P90, P95 of monthly credit consumption and recommend
-    a per-user cap at <strong>P95 × 1.15 buffer</strong>. That keeps 95%+ of users completely
-    unblocked while it ring-fences runaway loops. The grid below also shows the resulting
-    <em>capped pool demand</em> — the worst-case month at these caps — vs the optimum pool from
+    Three policies — each balances <em>cap-hit risk</em> (users blocked when they exceed their monthly cap)
+    against <em>headroom</em> (slack the org pays for). <strong>Conservative</strong> errs toward zero friction
+    and accepts a larger overage budget. <strong>Aggressive</strong> compresses everyone into the pool with
+    tight caps and a small budget — accepting more cap-hit incidents in exchange for the lowest total cost.
+    <strong>Recommended</strong> sits in the middle. Pick one to drive the per-class detail and budget recommendation below.
+  </p>
+  <div class="strategy-tabs" id="strategy-tabs" role="tablist">
+    <button class="strategy-tab" data-strategy="conservative" type="button">Conservative</button>
+    <button class="strategy-tab active" data-strategy="recommended" type="button">Recommended</button>
+    <button class="strategy-tab" data-strategy="aggressive" type="button">Aggressive</button>
+  </div>
+  <div class="strat-grid" id="strategy-comparison" style="grid-template-columns:repeat(3,1fr);gap:14px;margin:14px 0 22px"></div>
+
+  <h4 style="margin:22px 0 6px;font-size:14px;color:var(--fg-muted);text-transform:uppercase;letter-spacing:.06em">Per-class detail · <span id="strategy-detail-label">recommended</span> strategy</h4>
+  <p class="section-lede" style="margin-bottom:14px">
+    For each class we compute the actual P50, P90, P95 of <strong>monthly</strong> spend per user
+    and recommend a per-user cap derived from the selected strategy. The grid below also shows the
+    resulting <em>capped pool demand</em> — the worst-case month at these caps — vs the optimum pool from
     section 3, so you can see headroom at a glance.
   </p>
   <div class="quota-grid" id="quota-cards"></div>
 
   <div class="chart-card" style="margin-top:18px">
-    <div class="chart-title">Cap effect on the usage distribution</div>
-    <div class="chart-sub">Same per-seat distribution as section 2, but with each persona's recommended cap drawn as a horizontal line. Bars above the line are the credits a cap would ring-fence; the labelled total is the worst-case pool demand at these caps.</div>
+    <div class="chart-title">Cap effect on the monthly spend distribution</div>
+    <div class="chart-sub">Same per-seat distribution as section 2, but with each persona's recommended cap drawn as a horizontal line. Bars above the line are the spend a cap would ring-fence; the labelled total is the worst-case pool demand at these caps.</div>
     <div id="chart-quota-distribution"></div>
     <div class="legend">
       <span class="legend-item"><span class="legend-swatch" style="background:var(--danger-emphasis)"></span>Power cap</span>
@@ -263,22 +287,22 @@
     </div>
   </div>
 
-  <h3 style="margin:26px 0 6px;font-size:16px">Enterprise overage budget — the hard ceiling above the pool</h3>
+  <h3 style="margin:26px 0 6px;font-size:16px">Enterprise overage budget — the hard monthly ceiling above the pool</h3>
   <p class="section-lede" style="margin-bottom:14px">
-    The enterprise budget limit is the maximum overage spend GitHub will charge in any month — when
+    The enterprise budget limit is the maximum overage spend GitHub will charge in any <strong>month</strong> — when
     it's reached, premium requests stop being billed (they revert to free models or are blocked).
-    Setting it correctly is a stochastic problem: month-to-month token consumption swings ±20–30%
-    around its trend. We model that as a log-normal multiplier (σ = 0.25) on the projected
+    Setting it correctly is a stochastic problem: month-to-month spend swings ±20–30%
+    around its trend. We model that as a log-normal multiplier on the projected
     monthly need, then for each candidate budget compute (a) probability that month exceeds the
     budget — i.e. you hit the cap and lose access — and (b) expected paid overage. The
-    recommendation is the smallest budget where <strong>cap-hit probability ≤ target</strong>.
+    recommendation is the smallest budget where <strong>cap-hit probability ≤ the strategy's target risk</strong>.
   </p>
   <div class="budget-controls" style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:14px">
     <div class="field" style="min-width:240px">
-      <label for="bud-target">Target cap-hit risk
-        <span style="color:var(--fg-subtle);font-weight:400">(<span id="bud-target-val">5</span>% of months)</span>
+      <label>Strategy target cap-hit risk
+        <span style="color:var(--fg-subtle);font-weight:400">(<span id="bud-target-val">5</span>% of months · driven by selected strategy)</span>
       </label>
-      <input type="range" id="bud-target" min="1" max="25" step="1" value="5">
+      <div style="font-size:13px;color:var(--fg-muted);padding:8px 0">Switch strategies above to change this target.</div>
     </div>
     <div class="field" style="min-width:220px">
       <label for="bud-vol">Monthly volatility (σ)
@@ -289,15 +313,15 @@
     <div class="field" style="min-width:240px">
       <label for="bud-quotas-on">Apply per-user caps</label>
       <select id="bud-quotas-on">
-        <option value="on" selected>Yes — cap power/regular at P95</option>
-        <option value="off">No — no per-user caps</option>
+        <option value="on" selected>Yes — apply selected strategy</option>
+        <option value="off">No — uncapped users</option>
       </select>
     </div>
   </div>
   <div class="opt-grid" style="grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px;margin-bottom:14px">
-    <div class="stat-card"><div class="stat-label">Pool entitlement</div><div class="stat-value" id="bud-pool">—</div><div class="stat-sub" id="bud-pool-sub">credits / mo</div></div>
-    <div class="stat-card"><div class="stat-label">Projected need</div><div class="stat-value" id="bud-need">—</div><div class="stat-sub" id="bud-need-sub">at current trend</div></div>
-    <div class="stat-card best"><div class="stat-label">Recommended budget</div><div class="stat-value" id="bud-reco">—</div><div class="stat-sub" id="bud-reco-sub">expected spend / mo</div></div>
+    <div class="stat-card"><div class="stat-label">Pool entitlement</div><div class="stat-value" id="bud-pool">—</div><div class="stat-sub" id="bud-pool-sub">$ / month</div></div>
+    <div class="stat-card"><div class="stat-label">Projected monthly need</div><div class="stat-value" id="bud-need">—</div><div class="stat-sub" id="bud-need-sub">at current trend</div></div>
+    <div class="stat-card best"><div class="stat-label">Recommended monthly budget</div><div class="stat-value" id="bud-reco">—</div><div class="stat-sub" id="bud-reco-sub">expected spend / mo</div></div>
     <div class="stat-card"><div class="stat-label">Worst-case month under cap</div><div class="stat-value" id="bud-save">—</div><div class="stat-sub" id="bud-save-sub">vs uncapped P99 tail</div></div>
   </div>
   <div class="chart-card">
